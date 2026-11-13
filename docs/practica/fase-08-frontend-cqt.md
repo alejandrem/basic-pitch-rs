@@ -46,7 +46,7 @@ n_bins           = n_semitones * CONTOURS_BINS_PER_SEMITONE            # 309
 CQT               -> (batch, 172, 309)
 NormalizedLog     -> (batch, 172, 309)
 BatchNorm inicial -> (batch, 172, 309, 1)
-HarmonicStacking  -> (batch, 172, 264, 8)   <-- truncado aqui
+HarmonicStacking  -> (batch, 172, 264, 8)   <-- truncado aquí
 ```
 
 Los 264 bins de salida existen para que los armónicos superiores (hasta el
