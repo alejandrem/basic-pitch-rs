@@ -39,6 +39,16 @@ Cada fase se encuentra en su propio archivo dentro de esta carpeta `docs/`:
 | 22 | Primera tarea | [primera-tarea.md](primera-tarea.md) |
 
 ---
+Aquí tienes la información organizada en una tabla:
+
+| Fases | Por qué juntas | Riesgo |
+| --- | --- | --- |
+| **P1** (0 + 1 + 2) | Auditoría + pesos + workspace. Todo mecánico, todo con el modelo y el código ya en disco. Deja listo el oráculo de referencia. | Bajo |
+| **P2** (3 + 4 + 5) | Audio → CQT → NormalizedLog → BN → HarmonicStacking. El bloque numérico difícil. Con kernels extraídos del ONNX es viable en un prompt. | Alto |
+| **P3** (6 + 7) | Red Candle + validación de equivalencia etapa por etapa. | Medio |
+| **P4** (8 + 9 + 10 + 11) | Ventanas/reconstrucción → notas → pitch bend → MIDI. Es port de numpy casi 1:1. | Bajo |
+| **P5** (12 + 13 + 14 + 15) | API + tests + CI + perf + docs. | Bajo |
+
 
 # Resultado esperado
 
