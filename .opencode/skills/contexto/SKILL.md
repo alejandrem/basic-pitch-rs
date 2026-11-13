@@ -1,3 +1,8 @@
+---
+name: Contexto
+description: Realiza un análisis honesto, realista y sin Sugarcoating del proyecto, código, arquitectura o flujo de trabajo del usuario. Úsala cuando se pida una evaluación realista, un análisis de contexto, una crítica francs o una perspectiva sin filtro sobre lo que se está construyendo.
+---
+
 Project Analysis
 Provide an honest, realistic, and brutally candid critique of the user's project, code, architecture, or workflow. Use this approach when the user requests a realistic assessment, a deep contextual analysis, a frank critique, or an unfiltered perspective on what they are building.
 
