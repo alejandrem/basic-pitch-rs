@@ -1,0 +1,392 @@
+{
+  "description": "Inventario de tensores del modelo activo, en el layout de Rust.",
+  "kernel_layout": "[out_channels, in_channels, kernel_height, kernel_width]",
+  "n_tensors": 24,
+  "total_parameters": 16864,
+  "tensors": [
+    {
+      "rust_name": "batch_norm.input.gamma",
+      "role": "bn_gamma",
+      "layer": "batch_normalization",
+      "shape": [
+        1
+      ],
+      "dtype": "float32",
+      "bytes": 4,
+      "tf_name": "batch_normalization/gamma",
+      "canonical_tf_name": "batch_normalization/gamma",
+      "transpose": null,
+      "bn_folded_in_onnx": true
+    },
+    {
+      "rust_name": "batch_norm.input.beta",
+      "role": "bn_beta",
+      "layer": "batch_normalization",
+      "shape": [
+        1
+      ],
+      "dtype": "float32",
+      "bytes": 4,
+      "tf_name": "batch_normalization/beta",
+      "canonical_tf_name": "batch_normalization/beta",
+      "transpose": null,
+      "bn_folded_in_onnx": true
+    },
+    {
+      "rust_name": "batch_norm.input.moving_mean",
+      "role": "bn_moving_mean",
+      "layer": "batch_normalization",
+      "shape": [
+        1
+      ],
+      "dtype": "float32",
+      "bytes": 4,
+      "tf_name": "batch_normalization/moving_mean",
+      "canonical_tf_name": "batch_normalization/moving_mean",
+      "transpose": null,
+      "bn_folded_in_onnx": true
+    },
+    {
+      "rust_name": "batch_norm.input.moving_variance",
+      "role": "bn_moving_variance",
+      "layer": "batch_normalization",
+      "shape": [
+        1
+      ],
+      "dtype": "float32",
+      "bytes": 4,
+      "tf_name": "batch_normalization/moving_variance",
+      "canonical_tf_name": "batch_normalization/moving_variance",
+      "transpose": null,
+      "bn_folded_in_onnx": true
+    },
+    {
+      "rust_name": "contour.conv1.weight",
+      "role": "conv_kernel",
+      "layer": "conv2d_1",
+      "shape": [
+        8,
+        8,
+        3,
+        39
+      ],
+      "dtype": "float32",
+      "bytes": 29952,
+      "tf_name": "conv2d_1/kernel",
+      "canonical_tf_name": "conv2d_1/kernel",
+      "transpose": [
+        3,
+        2,
+        0,
+        1
+      ],
+      "bn_folded_in_onnx": false
+    },
+    {
+      "rust_name": "contour.conv1.bias",
+      "role": "conv_bias",
+      "layer": "conv2d_1",
+      "shape": [
+        8
+      ],
+      "dtype": "float32",
+      "bytes": 32,
+      "tf_name": "conv2d_1/bias",
+      "canonical_tf_name": "conv2d_1/bias",
+      "transpose": null,
+      "bn_folded_in_onnx": false
+    },
+    {
+      "rust_name": "contour.batch_norm.gamma",
+      "role": "bn_gamma",
+      "layer": "batch_normalization_2",
+      "shape": [
+        8
+      ],
+      "dtype": "float32",
+      "bytes": 32,
+      "tf_name": "batch_normalization_2/gamma",
+      "canonical_tf_name": "batch_normalization_2/gamma",
+      "transpose": null,
+      "bn_folded_in_onnx": true
+    },
+    {
+      "rust_name": "contour.batch_norm.beta",
+      "role": "bn_beta",
+      "layer": "batch_normalization_2",
+      "shape": [
+        8
+      ],
+      "dtype": "float32",
+      "bytes": 32,
+      "tf_name": "batch_normalization_2/beta",
+      "canonical_tf_name": "batch_normalization_2/beta",
+      "transpose": null,
+      "bn_folded_in_onnx": true
+    },
+    {
+      "rust_name": "contour.batch_norm.moving_mean",
+      "role": "bn_moving_mean",
+      "layer": "batch_normalization_2",
+      "shape": [
+        8
+      ],
+      "dtype": "float32",
+      "bytes": 32,
+      "tf_name": "batch_normalization_2/moving_mean",
+      "canonical_tf_name": "batch_normalization_2/moving_mean",
+      "transpose": null,
+      "bn_folded_in_onnx": true
+    },
+    {
+      "rust_name": "contour.batch_norm.moving_variance",
+      "role": "bn_moving_variance",
+      "layer": "batch_normalization_2",
+      "shape": [
+        8
+      ],
+      "dtype": "float32",
+      "bytes": 32,
+      "tf_name": "batch_normalization_2/moving_variance",
+      "canonical_tf_name": "batch_normalization_2/moving_variance",
+      "transpose": null,
+      "bn_folded_in_onnx": true
+    },
+    {
+      "rust_name": "contour.reduced.weight",
+      "role": "conv_kernel",
+      "layer": "contours-reduced",
+      "shape": [
+        1,
+        8,
+        5,
+        5
+      ],
+      "dtype": "float32",
+      "bytes": 800,
+      "tf_name": "contours-reduced/kernel",
+      "canonical_tf_name": "contours-reduced/kernel",
+      "transpose": [
+        3,
+        2,
+        0,
+        1
+      ],
+      "bn_folded_in_onnx": false
+    },
+    {
+      "rust_name": "contour.reduced.bias",
+      "role": "conv_bias",
+      "layer": "contours-reduced",
+      "shape": [
+        1
+      ],
+      "dtype": "float32",
+      "bytes": 4,
+      "tf_name": "contours-reduced/bias",
+      "canonical_tf_name": "contours-reduced/bias",
+      "transpose": null,
+      "bn_folded_in_onnx": false
+    },
+    {
+      "rust_name": "notes.conv1.weight",
+      "role": "conv_kernel",
+      "layer": "conv2d_2",
+      "shape": [
+        32,
+        1,
+        7,
+        7
+      ],
+      "dtype": "float32",
+      "bytes": 6272,
+      "tf_name": "conv2d_2/kernel",
+      "canonical_tf_name": "conv2d_2/kernel",
+      "transpose": [
+        3,
+        2,
+        0,
+        1
+      ],
+      "bn_folded_in_onnx": false
+    },
+    {
+      "rust_name": "notes.conv1.bias",
+      "role": "conv_bias",
+      "layer": "conv2d_2",
+      "shape": [
+        32
+      ],
+      "dtype": "float32",
+      "bytes": 128,
+      "tf_name": "conv2d_2/bias",
+      "canonical_tf_name": "conv2d_2/bias",
+      "transpose": null,
+      "bn_folded_in_onnx": false
+    },
+    {
+      "rust_name": "notes.conv2.weight",
+      "role": "conv_kernel",
+      "layer": "conv2d_3",
+      "shape": [
+        1,
+        32,
+        7,
+        3
+      ],
+      "dtype": "float32",
+      "bytes": 2688,
+      "tf_name": "conv2d_3/kernel",
+      "canonical_tf_name": "conv2d_3/kernel",
+      "transpose": [
+        3,
+        2,
+        0,
+        1
+      ],
+      "bn_folded_in_onnx": false
+    },
+    {
+      "rust_name": "notes.conv2.bias",
+      "role": "conv_bias",
+      "layer": "conv2d_3",
+      "shape": [
+        1
+      ],
+      "dtype": "float32",
+      "bytes": 4,
+      "tf_name": "conv2d_3/bias",
+      "canonical_tf_name": "conv2d_3/bias",
+      "transpose": null,
+      "bn_folded_in_onnx": false
+    },
+    {
+      "rust_name": "onset.conv1.weight",
+      "role": "conv_kernel",
+      "layer": "conv2d_4",
+      "shape": [
+        32,
+        8,
+        5,
+        5
+      ],
+      "dtype": "float32",
+      "bytes": 25600,
+      "tf_name": "conv2d_4/kernel",
+      "canonical_tf_name": "conv2d_4/kernel",
+      "transpose": [
+        3,
+        2,
+        0,
+        1
+      ],
+      "bn_folded_in_onnx": false
+    },
+    {
+      "rust_name": "onset.conv1.bias",
+      "role": "conv_bias",
+      "layer": "conv2d_4",
+      "shape": [
+        32
+      ],
+      "dtype": "float32",
+      "bytes": 128,
+      "tf_name": "conv2d_4/bias",
+      "canonical_tf_name": "conv2d_4/bias",
+      "transpose": null,
+      "bn_folded_in_onnx": false
+    },
+    {
+      "rust_name": "onset.batch_norm.gamma",
+      "role": "bn_gamma",
+      "layer": "batch_normalization_3",
+      "shape": [
+        32
+      ],
+      "dtype": "float32",
+      "bytes": 128,
+      "tf_name": "batch_normalization_3/gamma",
+      "canonical_tf_name": "batch_normalization_3/gamma",
+      "transpose": null,
+      "bn_folded_in_onnx": true
+    },
+    {
+      "rust_name": "onset.batch_norm.beta",
+      "role": "bn_beta",
+      "layer": "batch_normalization_3",
+      "shape": [
+        32
+      ],
+      "dtype": "float32",
+      "bytes": 128,
+      "tf_name": "batch_normalization_3/beta",
+      "canonical_tf_name": "batch_normalization_3/beta",
+      "transpose": null,
+      "bn_folded_in_onnx": true
+    },
+    {
+      "rust_name": "onset.batch_norm.moving_mean",
+      "role": "bn_moving_mean",
+      "layer": "batch_normalization_3",
+      "shape": [
+        32
+      ],
+      "dtype": "float32",
+      "bytes": 128,
+      "tf_name": "batch_normalization_3/moving_mean",
+      "canonical_tf_name": "batch_normalization_3/moving_mean",
+      "transpose": null,
+      "bn_folded_in_onnx": true
+    },
+    {
+      "rust_name": "onset.batch_norm.moving_variance",
+      "role": "bn_moving_variance",
+      "layer": "batch_normalization_3",
+      "shape": [
+        32
+      ],
+      "dtype": "float32",
+      "bytes": 128,
+      "tf_name": "batch_normalization_3/moving_variance",
+      "canonical_tf_name": "batch_normalization_3/moving_variance",
+      "transpose": null,
+      "bn_folded_in_onnx": true
+    },
+    {
+      "rust_name": "onset.conv2.weight",
+      "role": "conv_kernel",
+      "layer": "conv2d_5",
+      "shape": [
+        1,
+        33,
+        3,
+        3
+      ],
+      "dtype": "float32",
+      "bytes": 1188,
+      "tf_name": "conv2d_5/kernel",
+      "canonical_tf_name": "conv2d_5/kernel",
+      "transpose": [
+        3,
+        2,
+        0,
+        1
+      ],
+      "bn_folded_in_onnx": false
+    },
+    {
+      "rust_name": "onset.conv2.bias",
+      "role": "conv_bias",
+      "layer": "conv2d_5",
+      "shape": [
+        1
+      ],
+      "dtype": "float32",
+      "bytes": 4,
+      "tf_name": "conv2d_5/bias",
+      "canonical_tf_name": "conv2d_5/bias",
+      "transpose": null,
+      "bn_folded_in_onnx": false
+    }
+  ]
+}

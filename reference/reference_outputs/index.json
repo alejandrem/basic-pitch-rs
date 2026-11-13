@@ -1,0 +1,167 @@
+{
+  "description": "Salidas intermedias de referencia (Puntos de comparacion de la Fase 0).",
+  "points": {
+    "input_audio": {
+      "description": "Audio de entrada",
+      "file": "input_audio.npy",
+      "shape": [
+        1,
+        43844,
+        1
+      ],
+      "dtype": "float32",
+      "min": -0.9097737073898315,
+      "max": 0.6364996433258057,
+      "mean": 0.0003818328841589391
+    },
+    "cqt": {
+      "description": "CQT sin normalizar",
+      "file": "cqt.npy",
+      "shape": [
+        1,
+        172,
+        309
+      ],
+      "dtype": "float32",
+      "min": 1.5708209275544505e-06,
+      "max": 17.959623336791992,
+      "mean": 0.20521938800811768
+    },
+    "normalized_log": {
+      "description": "CQT normalizada",
+      "file": "normalized_log.npy",
+      "shape": [
+        1,
+        172,
+        309
+      ],
+      "dtype": "float32",
+      "min": 0.0,
+      "max": 1.0,
+      "mean": 0.38301828503608704
+    },
+    "batch_norm_input": {
+      "description": "CQT despues de Batch Normalization",
+      "file": "batch_norm_input.npy",
+      "shape": [
+        1,
+        172,
+        309,
+        1
+      ],
+      "dtype": "float32",
+      "min": -0.8769183158874512,
+      "max": 1.6038227081298828,
+      "mean": 0.07325085997581482
+    },
+    "harmonic_stacking": {
+      "description": "Harmonic Stacking",
+      "file": "harmonic_stacking.npy",
+      "shape": [
+        1,
+        172,
+        264,
+        8
+      ],
+      "dtype": "float32",
+      "min": -0.8769183158874512,
+      "max": 1.6038227081298828,
+      "mean": 0.08501927554607391
+    },
+    "contour_conv": {
+      "description": "Salida de la conv de contornos",
+      "file": "contour_conv.npy",
+      "shape": [
+        1,
+        172,
+        264,
+        8
+      ],
+      "dtype": "float32",
+      "min": -2.676176071166992,
+      "max": 4.612475872039795,
+      "mean": 0.05301983654499054
+    },
+    "contour_reduced": {
+      "description": "Contorno reducido",
+      "file": "contour_reduced.npy",
+      "shape": [
+        1,
+        172,
+        264,
+        1
+      ],
+      "dtype": "float32",
+      "min": 0.05425658077001572,
+      "max": 0.8226190209388733,
+      "mean": 0.10433323681354523
+    },
+    "contour": {
+      "description": "Contorno final",
+      "file": "contour.npy",
+      "shape": [
+        1,
+        172,
+        264
+      ],
+      "dtype": "float32",
+      "min": 0.05425658077001572,
+      "max": 0.8226190209388733,
+      "mean": 0.10433323681354523
+    },
+    "notes_features": {
+      "description": "Caracteristicas de la rama de notas",
+      "file": "notes_features.npy",
+      "shape": [
+        1,
+        172,
+        88,
+        32
+      ],
+      "dtype": "float32",
+      "min": -1.1881930828094482,
+      "max": 1.2021939754486084,
+      "mean": 0.20840388536453247
+    },
+    "note": {
+      "description": "Prediccion de notas",
+      "file": "note.npy",
+      "shape": [
+        1,
+        172,
+        88
+      ],
+      "dtype": "float32",
+      "min": 0.07128018140792847,
+      "max": 0.865469217300415,
+      "mean": 0.1093640998005867
+    },
+    "onset_features": {
+      "description": "Caracteristicas de la rama de onsets",
+      "file": "onset_features.npy",
+      "shape": [
+        1,
+        172,
+        88,
+        32
+      ],
+      "dtype": "float32",
+      "min": -4.466458320617676,
+      "max": 4.366617679595947,
+      "mean": 0.0009033691021613777
+    },
+    "onset": {
+      "description": "Prediccion de onsets",
+      "file": "onset.npy",
+      "shape": [
+        1,
+        172,
+        88
+      ],
+      "dtype": "float32",
+      "min": 0.05172198638319969,
+      "max": 0.6726176738739014,
+      "mean": 0.10164471715688705
+    }
+  }
+}

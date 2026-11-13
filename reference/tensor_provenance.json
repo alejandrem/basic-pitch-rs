@@ -1,0 +1,671 @@
+{
+  "description": "Manifiesto de trazabilidad: cada tensor del modelo activo, atado a su nombre en TensorFlow, en ONNX y en Rust.",
+  "convention": {
+    "tf_kernel_layout": "[kh, kw, in_channels, out_channels]",
+    "rust_kernel_layout": "[out_channels, in_channels, kh, kw]",
+    "transpose": [
+      3,
+      2,
+      0,
+      1
+    ],
+    "bn_folded_note": "En ONNX la BatchNorm esta fusionada en las convoluciones conv2d_1 y conv2d_4; sus inicializadores no son comparables tensor a tensor. La relacion de fusion se verifica numericamente."
+  },
+  "tensors": [
+    {
+      "tf_name": "batch_normalization/gamma",
+      "canonical_tf_name": "batch_normalization/gamma",
+      "rust_name": "batch_norm.input.gamma",
+      "role": "bn_gamma",
+      "layer": "batch_normalization",
+      "shape_tf": [
+        1
+      ],
+      "shape_rust": [
+        1
+      ],
+      "transpose": null,
+      "dtype": "float32",
+      "bn_folded_in_onnx": true,
+      "onnx_name": "model_1/conv2d_5/Conv2D;model_1/conv2d_5/Conv2D",
+      "max_abs_diff": 0.48823851346969604,
+      "onnx_check": "direct",
+      "max_abs_diff_rust_vs_tf": 0.0
+    },
+    {
+      "tf_name": "batch_normalization/beta",
+      "canonical_tf_name": "batch_normalization/beta",
+      "rust_name": "batch_norm.input.beta",
+      "role": "bn_beta",
+      "layer": "batch_normalization",
+      "shape_tf": [
+        1
+      ],
+      "shape_rust": [
+        1
+      ],
+      "transpose": null,
+      "dtype": "float32",
+      "bn_folded_in_onnx": true,
+      "onnx_name": "model_1/conv2d_5/Conv2D;model_1/conv2d_5/Conv2D",
+      "max_abs_diff": 0.3687160313129425,
+      "onnx_check": "direct",
+      "max_abs_diff_rust_vs_tf": 0.0
+    },
+    {
+      "tf_name": "batch_normalization/moving_mean",
+      "canonical_tf_name": "batch_normalization/moving_mean",
+      "rust_name": "batch_norm.input.moving_mean",
+      "role": "bn_moving_mean",
+      "layer": "batch_normalization",
+      "shape_tf": [
+        1
+      ],
+      "shape_rust": [
+        1
+      ],
+      "transpose": null,
+      "dtype": "float32",
+      "bn_folded_in_onnx": true,
+      "onnx_name": "model_1/conv2d_5/Conv2D;model_1/conv2d_5/Conv2D",
+      "max_abs_diff": 0.5021218657493591,
+      "onnx_check": "direct",
+      "max_abs_diff_rust_vs_tf": 0.0
+    },
+    {
+      "tf_name": "batch_normalization/moving_variance",
+      "canonical_tf_name": "batch_normalization/moving_variance",
+      "rust_name": "batch_norm.input.moving_variance",
+      "role": "bn_moving_variance",
+      "layer": "batch_normalization",
+      "shape_tf": [
+        1
+      ],
+      "shape_rust": [
+        1
+      ],
+      "transpose": null,
+      "dtype": "float32",
+      "bn_folded_in_onnx": true,
+      "onnx_name": "model_1/conv2d_5/Conv2D;model_1/conv2d_5/Conv2D",
+      "max_abs_diff": 0.03773479163646698,
+      "onnx_check": "direct",
+      "max_abs_diff_rust_vs_tf": 0.0
+    },
+    {
+      "tf_name": "conv2d_1/kernel",
+      "canonical_tf_name": "conv2d_1/kernel",
+      "rust_name": "contour.conv1.weight",
+      "role": "conv_kernel",
+      "layer": "conv2d_1",
+      "shape_tf": [
+        3,
+        39,
+        8,
+        8
+      ],
+      "shape_rust": [
+        8,
+        8,
+        3,
+        39
+      ],
+      "transpose": [
+        3,
+        2,
+        0,
+        1
+      ],
+      "dtype": "float32",
+      "bn_folded_in_onnx": false,
+      "onnx_name": "const_fold_opt__727",
+      "max_abs_diff": 0.19262844324111938,
+      "onnx_check": "direct",
+      "max_abs_diff_rust_vs_tf": 0.0
+    },
+    {
+      "tf_name": "conv2d_1/bias",
+      "canonical_tf_name": "conv2d_1/bias",
+      "rust_name": "contour.conv1.bias",
+      "role": "conv_bias",
+      "layer": "conv2d_1",
+      "shape_tf": [
+        8
+      ],
+      "shape_rust": [
+        8
+      ],
+      "transpose": null,
+      "dtype": "float32",
+      "bn_folded_in_onnx": false,
+      "onnx_name": "pad_const__372",
+      "max_abs_diff": 35.99989887417178,
+      "onnx_check": "direct",
+      "max_abs_diff_rust_vs_tf": 0.0
+    },
+    {
+      "tf_name": "batch_normalization_2/gamma",
+      "canonical_tf_name": "batch_normalization_2/gamma",
+      "rust_name": "contour.batch_norm.gamma",
+      "role": "bn_gamma",
+      "layer": "batch_normalization_2",
+      "shape_tf": [
+        8
+      ],
+      "shape_rust": [
+        8
+      ],
+      "transpose": null,
+      "dtype": "float32",
+      "bn_folded_in_onnx": true,
+      "onnx_name": "pad_const__372",
+      "max_abs_diff": 35.12206196784973,
+      "onnx_check": "direct",
+      "max_abs_diff_rust_vs_tf": 0.0
+    },
+    {
+      "tf_name": "batch_normalization_2/beta",
+      "canonical_tf_name": "batch_normalization_2/beta",
+      "rust_name": "contour.batch_norm.beta",
+      "role": "bn_beta",
+      "layer": "batch_normalization_2",
+      "shape_tf": [
+        8
+      ],
+      "shape_rust": [
+        8
+      ],
+      "transpose": null,
+      "dtype": "float32",
+      "bn_folded_in_onnx": true,
+      "onnx_name": "pad_const__372",
+      "max_abs_diff": 36.40016594529152,
+      "onnx_check": "direct",
+      "max_abs_diff_rust_vs_tf": 0.0
+    },
+    {
+      "tf_name": "batch_normalization_2/moving_mean",
+      "canonical_tf_name": "batch_normalization_2/moving_mean",
+      "rust_name": "contour.batch_norm.moving_mean",
+      "role": "bn_moving_mean",
+      "layer": "batch_normalization_2",
+      "shape_tf": [
+        8
+      ],
+      "shape_rust": [
+        8
+      ],
+      "transpose": null,
+      "dtype": "float32",
+      "bn_folded_in_onnx": true,
+      "onnx_name": "pad_const__372",
+      "max_abs_diff": 35.11208391189575,
+      "onnx_check": "direct",
+      "max_abs_diff_rust_vs_tf": 0.0
+    },
+    {
+      "tf_name": "batch_normalization_2/moving_variance",
+      "canonical_tf_name": "batch_normalization_2/moving_variance",
+      "rust_name": "contour.batch_norm.moving_variance",
+      "role": "bn_moving_variance",
+      "layer": "batch_normalization_2",
+      "shape_tf": [
+        8
+      ],
+      "shape_rust": [
+        8
+      ],
+      "transpose": null,
+      "dtype": "float32",
+      "bn_folded_in_onnx": true,
+      "onnx_name": "pad_const__372",
+      "max_abs_diff": 35.18835735321045,
+      "onnx_check": "direct",
+      "max_abs_diff_rust_vs_tf": 0.0
+    },
+    {
+      "tf_name": "contours-reduced/kernel",
+      "canonical_tf_name": "contours-reduced/kernel",
+      "rust_name": "contour.reduced.weight",
+      "role": "conv_kernel",
+      "layer": "contours-reduced",
+      "shape_tf": [
+        5,
+        5,
+        8,
+        1
+      ],
+      "shape_rust": [
+        1,
+        8,
+        5,
+        5
+      ],
+      "transpose": [
+        3,
+        2,
+        0,
+        1
+      ],
+      "dtype": "float32",
+      "bn_folded_in_onnx": false,
+      "onnx_name": "const_fold_opt__710",
+      "max_abs_diff": 0.0,
+      "onnx_check": "direct",
+      "max_abs_diff_rust_vs_tf": 0.0
+    },
+    {
+      "tf_name": "contours-reduced/bias",
+      "canonical_tf_name": "contours-reduced/bias",
+      "rust_name": "contour.reduced.bias",
+      "role": "conv_bias",
+      "layer": "contours-reduced",
+      "shape_tf": [
+        1
+      ],
+      "shape_rust": [
+        1
+      ],
+      "transpose": null,
+      "dtype": "float32",
+      "bn_folded_in_onnx": false,
+      "onnx_name": "model_1/conv2d_5/Conv2D;model_1/conv2d_5/Conv2D",
+      "max_abs_diff": 0.39454349875450134,
+      "onnx_check": "direct",
+      "max_abs_diff_rust_vs_tf": 0.0
+    },
+    {
+      "tf_name": "conv2d_2/kernel",
+      "canonical_tf_name": "conv2d_2/kernel",
+      "rust_name": "notes.conv1.weight",
+      "role": "conv_kernel",
+      "layer": "conv2d_2",
+      "shape_tf": [
+        7,
+        7,
+        1,
+        32
+      ],
+      "shape_rust": [
+        32,
+        1,
+        7,
+        7
+      ],
+      "transpose": [
+        3,
+        2,
+        0,
+        1
+      ],
+      "dtype": "float32",
+      "bn_folded_in_onnx": false,
+      "onnx_name": "const_fold_opt__738",
+      "max_abs_diff": 0.0,
+      "onnx_check": "direct",
+      "max_abs_diff_rust_vs_tf": 0.0
+    },
+    {
+      "tf_name": "conv2d_2/bias",
+      "canonical_tf_name": "conv2d_2/bias",
+      "rust_name": "notes.conv1.bias",
+      "role": "conv_bias",
+      "layer": "conv2d_2",
+      "shape_tf": [
+        32
+      ],
+      "shape_rust": [
+        32
+      ],
+      "transpose": null,
+      "dtype": "float32",
+      "bn_folded_in_onnx": false,
+      "onnx_name": "model_1/re_lu_3/Relu;model_1/re_lu_3/Relu;model_1/batch_normalization_3/FusedBatchNormV3;model_1/batch_normalization_3/FusedBatchNormV3;model_1/conv2d_4/BiasAdd/ReadVariableOp;model_1/conv2d_4/BiasAdd/ReadVariableOp;model_1/conv2d_4/BiasAdd;model_1/conv2d_4/BiasAdd;model_1/conv2d_2/Conv2D;model_1/conv2d_2/Conv2D;model_1/conv2d_4/Conv2D;model_1/conv2d_4/Conv2D",
+      "max_abs_diff": 2.2380552291870117,
+      "onnx_check": "direct",
+      "max_abs_diff_rust_vs_tf": 0.0
+    },
+    {
+      "tf_name": "conv2d_3/kernel",
+      "canonical_tf_name": "conv2d_3/kernel",
+      "rust_name": "notes.conv2.weight",
+      "role": "conv_kernel",
+      "layer": "conv2d_3",
+      "shape_tf": [
+        7,
+        3,
+        32,
+        1
+      ],
+      "shape_rust": [
+        1,
+        32,
+        7,
+        3
+      ],
+      "transpose": [
+        3,
+        2,
+        0,
+        1
+      ],
+      "dtype": "float32",
+      "bn_folded_in_onnx": false,
+      "onnx_name": "const_fold_opt__702",
+      "max_abs_diff": 0.0,
+      "onnx_check": "direct",
+      "max_abs_diff_rust_vs_tf": 0.0
+    },
+    {
+      "tf_name": "conv2d_3/bias",
+      "canonical_tf_name": "conv2d_3/bias",
+      "rust_name": "notes.conv2.bias",
+      "role": "conv_bias",
+      "layer": "conv2d_3",
+      "shape_tf": [
+        1
+      ],
+      "shape_rust": [
+        1
+      ],
+      "transpose": null,
+      "dtype": "float32",
+      "bn_folded_in_onnx": false,
+      "onnx_name": "model_1/conv2d_5/Conv2D;model_1/conv2d_5/Conv2D",
+      "max_abs_diff": 0.6187598705291748,
+      "onnx_check": "direct",
+      "max_abs_diff_rust_vs_tf": 0.0
+    },
+    {
+      "tf_name": "conv2d_4/kernel",
+      "canonical_tf_name": "conv2d_4/kernel",
+      "rust_name": "onset.conv1.weight",
+      "role": "conv_kernel",
+      "layer": "conv2d_4",
+      "shape_tf": [
+        5,
+        5,
+        8,
+        32
+      ],
+      "shape_rust": [
+        32,
+        8,
+        5,
+        5
+      ],
+      "transpose": [
+        3,
+        2,
+        0,
+        1
+      ],
+      "dtype": "float32",
+      "bn_folded_in_onnx": false,
+      "onnx_name": "const_fold_opt__707",
+      "max_abs_diff": 4.001513957977295,
+      "onnx_check": "direct",
+      "max_abs_diff_rust_vs_tf": 0.0
+    },
+    {
+      "tf_name": "conv2d_4/bias",
+      "canonical_tf_name": "conv2d_4/bias",
+      "rust_name": "onset.conv1.bias",
+      "role": "conv_bias",
+      "layer": "conv2d_4",
+      "shape_tf": [
+        32
+      ],
+      "shape_rust": [
+        32
+      ],
+      "transpose": null,
+      "dtype": "float32",
+      "bn_folded_in_onnx": false,
+      "onnx_name": "model_1/re_lu_3/Relu;model_1/re_lu_3/Relu;model_1/batch_normalization_3/FusedBatchNormV3;model_1/batch_normalization_3/FusedBatchNormV3;model_1/conv2d_4/BiasAdd/ReadVariableOp;model_1/conv2d_4/BiasAdd/ReadVariableOp;model_1/conv2d_4/BiasAdd;model_1/conv2d_4/BiasAdd;model_1/conv2d_2/Conv2D;model_1/conv2d_2/Conv2D;model_1/conv2d_4/Conv2D;model_1/conv2d_4/Conv2D",
+      "max_abs_diff": 2.680546760559082,
+      "onnx_check": "direct",
+      "max_abs_diff_rust_vs_tf": 0.0
+    },
+    {
+      "tf_name": "batch_normalization_3/gamma",
+      "canonical_tf_name": "batch_normalization_3/gamma",
+      "rust_name": "onset.batch_norm.gamma",
+      "role": "bn_gamma",
+      "layer": "batch_normalization_3",
+      "shape_tf": [
+        32
+      ],
+      "shape_rust": [
+        32
+      ],
+      "transpose": null,
+      "dtype": "float32",
+      "bn_folded_in_onnx": true,
+      "onnx_name": "model_1/re_lu_3/Relu;model_1/re_lu_3/Relu;model_1/batch_normalization_3/FusedBatchNormV3;model_1/batch_normalization_3/FusedBatchNormV3;model_1/conv2d_4/BiasAdd/ReadVariableOp;model_1/conv2d_4/BiasAdd/ReadVariableOp;model_1/conv2d_4/BiasAdd;model_1/conv2d_4/BiasAdd;model_1/conv2d_2/Conv2D;model_1/conv2d_2/Conv2D;model_1/conv2d_4/Conv2D;model_1/conv2d_4/Conv2D",
+      "max_abs_diff": 4.026186466217041,
+      "onnx_check": "direct",
+      "max_abs_diff_rust_vs_tf": 0.0
+    },
+    {
+      "tf_name": "batch_normalization_3/beta",
+      "canonical_tf_name": "batch_normalization_3/beta",
+      "rust_name": "onset.batch_norm.beta",
+      "role": "bn_beta",
+      "layer": "batch_normalization_3",
+      "shape_tf": [
+        32
+      ],
+      "shape_rust": [
+        32
+      ],
+      "transpose": null,
+      "dtype": "float32",
+      "bn_folded_in_onnx": true,
+      "onnx_name": "model_1/re_lu_3/Relu;model_1/re_lu_3/Relu;model_1/batch_normalization_3/FusedBatchNormV3;model_1/batch_normalization_3/FusedBatchNormV3;model_1/conv2d_4/BiasAdd/ReadVariableOp;model_1/conv2d_4/BiasAdd/ReadVariableOp;model_1/conv2d_4/BiasAdd;model_1/conv2d_4/BiasAdd;model_1/conv2d_2/Conv2D;model_1/conv2d_2/Conv2D;model_1/conv2d_4/Conv2D;model_1/conv2d_4/Conv2D",
+      "max_abs_diff": 1.5749475955963135,
+      "onnx_check": "direct",
+      "max_abs_diff_rust_vs_tf": 0.0
+    },
+    {
+      "tf_name": "batch_normalization_3/moving_mean",
+      "canonical_tf_name": "batch_normalization_3/moving_mean",
+      "rust_name": "onset.batch_norm.moving_mean",
+      "role": "bn_moving_mean",
+      "layer": "batch_normalization_3",
+      "shape_tf": [
+        32
+      ],
+      "shape_rust": [
+        32
+      ],
+      "transpose": null,
+      "dtype": "float32",
+      "bn_folded_in_onnx": true,
+      "onnx_name": "model_1/re_lu_3/Relu;model_1/re_lu_3/Relu;model_1/batch_normalization_3/FusedBatchNormV3;model_1/batch_normalization_3/FusedBatchNormV3;model_1/conv2d_4/BiasAdd/ReadVariableOp;model_1/conv2d_4/BiasAdd/ReadVariableOp;model_1/conv2d_4/BiasAdd;model_1/conv2d_4/BiasAdd;model_1/conv2d_2/Conv2D;model_1/conv2d_2/Conv2D;model_1/conv2d_4/Conv2D;model_1/conv2d_4/Conv2D",
+      "max_abs_diff": 2.9873576164245605,
+      "onnx_check": "direct",
+      "max_abs_diff_rust_vs_tf": 0.0
+    },
+    {
+      "tf_name": "batch_normalization_3/moving_variance",
+      "canonical_tf_name": "batch_normalization_3/moving_variance",
+      "rust_name": "onset.batch_norm.moving_variance",
+      "role": "bn_moving_variance",
+      "layer": "batch_normalization_3",
+      "shape_tf": [
+        32
+      ],
+      "shape_rust": [
+        32
+      ],
+      "transpose": null,
+      "dtype": "float32",
+      "bn_folded_in_onnx": true,
+      "onnx_name": "model_1/re_lu_3/Relu;model_1/re_lu_3/Relu;model_1/batch_normalization_3/FusedBatchNormV3;model_1/batch_normalization_3/FusedBatchNormV3;model_1/conv2d_4/BiasAdd/ReadVariableOp;model_1/conv2d_4/BiasAdd/ReadVariableOp;model_1/conv2d_4/BiasAdd;model_1/conv2d_4/BiasAdd;model_1/conv2d_2/Conv2D;model_1/conv2d_2/Conv2D;model_1/conv2d_4/Conv2D;model_1/conv2d_4/Conv2D",
+      "max_abs_diff": 2.51127028465271,
+      "onnx_check": "direct",
+      "max_abs_diff_rust_vs_tf": 0.0
+    },
+    {
+      "tf_name": "conv2d_5/kernel",
+      "canonical_tf_name": "conv2d_5/kernel",
+      "rust_name": "onset.conv2.weight",
+      "role": "conv_kernel",
+      "layer": "conv2d_5",
+      "shape_tf": [
+        3,
+        3,
+        33,
+        1
+      ],
+      "shape_rust": [
+        1,
+        33,
+        3,
+        3
+      ],
+      "transpose": [
+        3,
+        2,
+        0,
+        1
+      ],
+      "dtype": "float32",
+      "bn_folded_in_onnx": false,
+      "onnx_name": "const_fold_opt__680",
+      "max_abs_diff": 0.0,
+      "onnx_check": "direct",
+      "max_abs_diff_rust_vs_tf": 0.0
+    },
+    {
+      "tf_name": "conv2d_5/bias",
+      "canonical_tf_name": "conv2d_5/bias",
+      "rust_name": "onset.conv2.bias",
+      "role": "conv_bias",
+      "layer": "conv2d_5",
+      "shape_tf": [
+        1
+      ],
+      "shape_rust": [
+        1
+      ],
+      "transpose": null,
+      "dtype": "float32",
+      "bn_folded_in_onnx": false,
+      "onnx_name": "model_1/conv2d_5/Conv2D;model_1/conv2d_5/Conv2D",
+      "max_abs_diff": 0.36014845967292786,
+      "onnx_check": "direct",
+      "max_abs_diff_rust_vs_tf": 0.0
+    }
+  ],
+  "bn_folding_checks": [
+    {
+      "conv": "conv2d_1",
+      "batch_norm": "batch_normalization_2",
+      "onnx_name": "const_fold_opt__727",
+      "kernel_max_abs_diff": 2.9802322387695312e-08,
+      "bias_max_abs_diff": 1.1920928955078125e-07,
+      "scale": [
+        0.8015918731689453,
+        1.1964924335479736,
+        0.9738993644714355,
+        1.4570345878601074,
+        1.5840973854064941,
+        0.764477550983429,
+        0.14791376888751984,
+        1.5522021055221558
+      ],
+      "passed": true
+    },
+    {
+      "conv": "conv2d_4",
+      "batch_norm": "batch_normalization_3",
+      "onnx_name": "const_fold_opt__707",
+      "kernel_max_abs_diff": 4.76837158203125e-07,
+      "bias_max_abs_diff": 2.384185791015625e-07,
+      "scale": [
+        2.184731960296631,
+        2.9944303035736084,
+        1.4398971796035767,
+        5.133286476135254,
+        2.7911932468414307,
+        1.5352569818496704,
+        6.297423362731934,
+        3.8468821048736572,
+        3.4619641304016113,
+        3.082826852798462,
+        0.9907012581825256,
+        6.022703647613525,
+        3.0725598335266113,
+        4.073507308959961,
+        3.483748435974121,
+        4.591392517089844,
+        2.563243865966797,
+        4.972634792327881,
+        6.905068874359131,
+        3.552570104598999,
+        4.003235816955566,
+        1.8009088039398193,
+        5.778970718383789,
+        2.4317734241485596,
+        6.0384345054626465,
+        1.7446064949035645,
+        3.745809316635132,
+        7.993828773498535,
+        2.8966100215911865,
+        6.411186218261719,
+        2.6513991355895996,
+        4.572015762329102
+      ],
+      "passed": true
+    }
+  ],
+  "output_cross_check_tf_vs_onnx": {
+    "contour": {
+      "shape_tf": [
+        1,
+        172,
+        264
+      ],
+      "shape_onnx": [
+        1,
+        172,
+        264
+      ],
+      "max_abs_diff": 0.00018388032913208008,
+      "mean_abs_diff": 4.6360696615010966e-06,
+      "cosine_similarity": 1.0
+    },
+    "note": {
+      "shape_tf": [
+        1,
+        172,
+        88
+      ],
+      "shape_onnx": [
+        1,
+        172,
+        88
+      ],
+      "max_abs_diff": 9.101629257202148e-05,
+      "mean_abs_diff": 2.5320898657810176e-06,
+      "cosine_similarity": 1.0
+    },
+    "onset": {
+      "shape_tf": [
+        1,
+        172,
+        88
+      ],
+      "shape_onnx": [
+        1,
+        172,
+        88
+      ],
+      "max_abs_diff": 0.00012604892253875732,
+      "mean_abs_diff": 9.843442967394367e-06,
+      "cosine_similarity": 0.9999998807907104
+    }
+  }
+}
