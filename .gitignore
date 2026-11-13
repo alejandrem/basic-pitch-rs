@@ -9,3 +9,7 @@
 
 # Salidas temporales
 *.mid
+
+# Cache de Python
+__pycache__/
+*.py[cod]
