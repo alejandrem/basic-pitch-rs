@@ -1,1 +1,11 @@
-basic-pitch/
+# Referencia de Python (repo oficial de Spotify, solo lectura)
+/basic-pitch/
+
+# Entorno Python de referencia (uv)
+/.venv/
+
+# Artefactos de compilacion de Rust
+/target/
+
+# Salidas temporales
+*.mid

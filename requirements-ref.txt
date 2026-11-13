@@ -1,0 +1,24 @@
+# Entorno Python de REFERENCIA (solo desarrollo: extraccion, auditoria y
+# validacion). El programa Rust NO depende de Python para ejecutar.
+#
+# Se fija con uv:
+#   uv venv --python 3.11 .venv
+#   uv pip install --python .venv/bin/python -r requirements-ref.txt
+#
+# Versiones fijadas y motivo:
+#   Python 3.11     - tensorflow 2.15 no soporta 3.12+
+#   protobuf 4.25.9 - tensorflow 2.15 exige <5 y onnx 1.18 exige >=4.25.3;
+#                      onnx 1.23 exige >=6.31, incompatible con TF 2.15
+#   numpy 1.26.4    - tensorflow 2.15 exige <2
+#   librosa 0.10.2  - fija res_type='soxr_hq', que es el remuestreador de la
+#                      referencia (en 0.8/0.9 era 'kaiser_best')
+tensorflow==2.15.0.post1
+librosa==0.10.2.post1
+pretty_midi>=0.2.9
+mir_eval>=0.6.0
+resampy>=0.2.2,<0.4.3
+safetensors>=0.4
+numpy<2
+onnx==1.18.0
+onnxruntime==1.20.1
+protobuf==4.25.9

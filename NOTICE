@@ -1,0 +1,29 @@
+basic-pitch-rs
+Copyright 2026 the basic-pitch-rs authors
+
+This product is a Rust port of the inference engine of Basic Pitch.
+
+This product includes software developed at Spotify AB (http://www.spotify.com/),
+licensed under the Apache License, Version 2.0:
+    https://github.com/spotify/basic-pitch
+    Copyright 2022 Spotify AB
+
+The model weights (ICASSP 2022) are the pretrained assets distributed with
+Basic Pitch and are used unmodified. See models/basic-pitch/icassp-2022/
+source_metadata.json for provenance and hashes.
+
+This product includes software from:
+  - Candle (Apache-2.0), Hugging Face: https://github.com/huggingface/candle
+  - Librosa (ISC): part of the reference implementation
+  - mir_eval (MIT): part of the reference implementation
+  - NumPy (BSD): part of the reference implementation
+  - pretty-midi (MIT): part of the reference implementation
+  - resampy (ISC): part of the reference implementation
+  - SciPy (BSD): part of the reference implementation
+  - TensorFlow (Apache-2.0): used only to extract and validate the weights
+  - libsoxr (LGPL-2.1-or-later): resampling, dynamically linked
+  - libsndfile (LGPL-2.1-or-later): reached through Symphonia
+
+The test fixtures in basic-pitch/tests/resources include audio from the
+Vocadito dataset, licensed under Creative Commons Attribution 4.0
+International: https://zenodo.org/record/5578807
