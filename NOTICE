@@ -21,8 +21,15 @@ This product includes software from:
   - resampy (ISC): part of the reference implementation
   - SciPy (BSD): part of the reference implementation
   - TensorFlow (Apache-2.0): used only to extract and validate the weights
-  - libsoxr (LGPL-2.1-or-later): resampling, dynamically linked
-  - libsndfile (LGPL-2.1-or-later): reached through Symphonia
+  - Symphonia (Apache-2.0), Rust: https://github.com/pdeljanov/Symphonia
+        pure-Rust audio decoding, used by this port
+  - libsoxr (LGPL-2.1-or-later): resampling, dynamically linked against the
+        system library (`libsoxr.so`), resolved at build time with pkg-config
+
+The reference implementation (Python) additionally relies on libsndfile
+(LGPL-2.1-or-later) through soundfile, and on libsndfile-based decoders
+for audio input. This Rust port does NOT link libsndfile: it uses
+Symphonia, which is a pure-Rust decoder.
 
 The test fixtures in basic-pitch/tests/resources include audio from the
 Vocadito dataset, licensed under Creative Commons Attribution 4.0

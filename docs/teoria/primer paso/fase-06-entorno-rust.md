@@ -150,6 +150,30 @@ Las versiones se fijarán en `Cargo.toml` y `Cargo.lock` después de comprobar l
 
 No se deberá fijar una versión antigua de Candle simplemente porque aparezca en un ejemplo. Se seleccionará una versión estable cuyas APIs, dependencias y características de backend hayan sido verificadas.
 
+## 6.2.1. Dependencias de sistema
+
+El crate `soxr` enlaza `libsoxr` **dinamicamente**, resuelto en tiempo de
+compilacion con `pkg-config`. Make falta la biblioteca de desarrollo:
+
+```bash
+# Debian / Ubuntu
+sudo apt-get install libsoxr0-dev
+
+# Fedora
+sudo dnf install soxr-devel
+
+# macOS
+brew install soxr
+```
+
+Sin las cabeceras, la compilacion falla con un mensaje explicito del
+`build.rs` de `libsoxr-sys`. El enlazado dinamico (y no estatico) es
+deliberado: es el supuesto que evita las obligaciones de la LGPL.
+
+El decodificador de audio (`symphonia`) es Rust puro y no necesita
+librerias del sistema: en particular, este port **no** enlaza `libsndfile`
+(a diferencia de la referencia en Python, que usa `soundfile`).
+
 ## 6.3. Configuración del dispositivo
 
 La primera versión utilizará CPU y tensores `float32`.
