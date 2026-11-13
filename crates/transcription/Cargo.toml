@@ -1,0 +1,20 @@
+[package]
+name = "basic-pitch-transcription"
+description = "Deteccion de notas y reconstruccion temporal de basic-pitch-rs"
+edition.workspace = true
+version.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+basic-pitch-audio-io.workspace = true
+basic-pitch-audio-preprocess.workspace = true
+basic-pitch-model.workspace = true
+candle-core.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

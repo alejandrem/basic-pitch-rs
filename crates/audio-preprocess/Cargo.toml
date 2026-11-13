@@ -1,0 +1,16 @@
+[package]
+name = "basic-pitch-audio-preprocess"
+description = "Preprocesamiento de audio (mono, remuestreo, ventanas) para basic-pitch-rs"
+edition.workspace = true
+version.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+basic-pitch-audio-io.workspace = true
+soxr.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

@@ -1,0 +1,81 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/audio-io",
+    "crates/audio-preprocess",
+    "crates/cqt",
+    "crates/basic-pitch-model",
+    "crates/transcription",
+    "crates/midi-io",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.82"
+license = "Apache-2.0"
+# `repository` se omite a proposito: el proyecto todavia no tiene una URL
+# propia. La referencia original (Apache-2.0, Spotify AB) es
+# https://github.com/spotify/basic-pitch, pero ese NO es el repositorio de
+# este port. Anadirlo aqui haria que `cargo publish` apuntara al upstream.
+
+[workspace.dependencies]
+# --- Tensores y red -------------------------------------------------------
+candle-core = "0.11"
+candle-nn = "0.11"
+
+# --- Pesos ----------------------------------------------------------------
+safetensors = "0.8"
+
+# --- Audio ----------------------------------------------------------------
+symphonia = { version = "0.5.5", features = ["wav", "flac", "ogg", "mp3", "aac", "pcm"] }
+# `soxr` reproduce el `res_type="soxr_hq"` de librosa 0.10, que es el
+# remuestreador de la referencia. Ver docs/practica/fase-07-procesamiento-audio.md.
+soxr = "0.6"
+
+# --- MIDI -----------------------------------------------------------------
+midly = "0.5"
+
+# --- Utilidades -----------------------------------------------------------
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+anyhow = "1"
+thiserror = "2"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tempfile = "3"
+
+# --- Crates internos ------------------------------------------------------
+basic-pitch-audio-io = { path = "crates/audio-io" }
+basic-pitch-audio-preprocess = { path = "crates/audio-preprocess" }
+basic-pitch-cqt = { path = "crates/cqt" }
+basic-pitch-model = { path = "crates/basic-pitch-model" }
+basic-pitch-transcription = { path = "crates/transcription" }
+basic-pitch-midi-io = { path = "crates/midi-io" }
+
+[package]
+name = "basic-pitch"
+description = "Transcripcion musical (audio a MIDI) en Rust, port de Spotify Basic Pitch"
+edition.workspace = true
+version.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+basic-pitch-transcription.workspace = true
+basic-pitch-model.workspace = true
+basic-pitch-audio-preprocess.workspace = true
+basic-pitch-cqt.workspace = true
+basic-pitch-midi-io.workspace = true
+anyhow.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+serde_json.workspace = true
+
+[[bin]]
+name = "basic-pitch"
+path = "src/main.rs"
+
+[profile.release]
+opt-level = 3
+lto = "thin"

@@ -1,0 +1,12 @@
+[package]
+name = "basic-pitch-audio-io"
+description = "Decodificacion de audio para basic-pitch-rs"
+edition.workspace = true
+version.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+symphonia.workspace = true
+thiserror.workspace = true
+tracing.workspace = true

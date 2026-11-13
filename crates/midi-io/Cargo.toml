@@ -1,0 +1,12 @@
+[package]
+name = "basic-pitch-midi-io"
+description = "Escritura de archivos MIDI para basic-pitch-rs"
+edition.workspace = true
+version.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+midly.workspace = true
+thiserror.workspace = true
+tracing.workspace = true

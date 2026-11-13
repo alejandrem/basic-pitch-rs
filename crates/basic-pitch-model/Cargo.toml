@@ -1,0 +1,20 @@
+[package]
+name = "basic-pitch-model"
+description = "Arquitectura neuronal de basic-pitch-rs"
+edition.workspace = true
+version.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+basic-pitch-cqt.workspace = true
+candle-core.workspace = true
+candle-nn.workspace = true
+safetensors.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
