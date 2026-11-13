@@ -49,6 +49,64 @@ La referencia utiliza `FFT_HOP`, la frecuencia de muestreo y una corrección tem
 
 Se deberán reproducir también los ajustes de alineación definidos en la implementación original, incluido el desplazamiento de alineación correspondiente.
 
+### 8.3.1. Corrección: reproducir literalmente, incluida la inconsistencia 172 / 142
+
+La numeración de ventanas que usa la referencia **no es coherente con los
+frames que realmente se emiten**, y esa incoherencia forma parte del
+comportamiento observable. Debe reproducirse tal cual, sin "corregirla".
+
+En `basic_pitch/note_creation.py`:
+
+```python
+def model_frames_to_time(n_frames):
+    original_times = librosa.core.frames_to_time(
+        np.arange(n_frames), sr=AUDIO_SAMPLE_RATE, hop_length=FFT_HOP
+    )
+    window_numbers = np.floor(np.arange(n_frames) / ANNOT_N_FRAMES)   # <-- divide por 172
+    window_offset = (FFT_HOP / AUDIO_SAMPLE_RATE) * (
+        ANNOT_N_FRAMES - (AUDIO_N_SAMPLES / FFT_HOP)
+    ) + MAGIC_ALIGNMENT_OFFSET
+    times = original_times - (window_offset * window_numbers)
+    return times
+```
+
+Mientras que en `basic_pitch/inference.py`, `unwrap_output` conserva:
+
+```python
+n_frames_per_window = (AUDIO_WINDOW_LENGTH * ANNOTATIONS_FPS) - n_overlapping_frames  # 172 - 30 = 142
+```
+
+Es decir: **la numeración de ventanas divide entre 172, pero solo sobreviven
+142 frames por ventana**. El desplazamiento temporal aplicado por ventana se
+acumula más lentamente de lo que "debería". Es un defecto del upstream, pero
+corregirlo cambiaría los tiempos de las notas respecto a los de Spotify.
+
+Contrato a reproducir literalmente:
+
+| Elemento | Valor | Origen |
+|---|---:|---|
+| Frames emitidos por ventana | 172 | `ANNOT_N_FRAMES` |
+| Frames conservados por ventana | 142 | `172 - 30` |
+| Divisor de la numeración de ventanas | **172** | `np.floor(idx / ANNOT_N_FRAMES)` |
+| `MAGIC_ALIGNMENT_OFFSET` | 0.0018 s | `note_creation.py` |
+| Truncado final | `int(n_expected_windows * 142)` | `unwrap_output` |
+
+Además, en `unwrap_output` el número de ventanas esperadas se calcula con
+**división flotante**, no con `ceil`:
+
+```python
+n_expected_windows = audio_original_length / hop_size   # float, no ceil
+```
+
+donde `audio_original_length` es la longitud **original**, anterior al padding
+inicial de 3,840 ceros, y `hop_size` es 36,164 muestras. El truncado final es
+`int(n_expected_windows * 142)` frames.
+
+Documentación requerida: esta inconsistencia debe quedar registrada en el
+código y en la documentación del proyecto como **comportamiento de
+compatibilidad**, con una nota que explique que no es un error de la
+implementación en Rust.
+
 ## 8.4. Pruebas de reconstrucción
 
 Se realizarán pruebas con:

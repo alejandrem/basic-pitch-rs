@@ -7,13 +7,43 @@ La extracción se realizará con Python. El programa Rust no dependerá de Tenso
 
 ## 5.1. Seleccionar el origen de los pesos
 
-Se utilizará como primera opción el modelo preentrenado oficial de TensorFlow.
+Se utilizará como **fuente canónica** el modelo preentrenado oficial de TensorFlow
+(SavedModel en `basic-pitch/basic_pitch/saved_models/icassp_2022/nmp/`).
 
-ONNX podrá utilizarse como alternativa de inspección o como fuente auxiliar si existe alguna dificultad para acceder al artefacto de TensorFlow.
+El motivo es concreto y verificable: el ONNX oficial tiene la BatchNorm
+**fusionada** en `FusedBatchNormV3`, de modo que las estadísticas originales
+`moving_mean` y `moving_variance` — irremplazables para reproducir la
+inferencia — solo son recuperables desde TensorFlow.
 
-Se recomienda utilizar TensorFlow como fuente canónica porque el modelo oficial se define originalmente en ese framework y algunas conversiones ONNX pueden introducir operaciones fusionadas, cambios en nombres de tensores o transformaciones adicionales.
+ONNX se utiliza como **fuente auxiliar y de verificación**, no como fuente
+principal:
+
+- Verificación numérica tensor a tensor contra TensorFlow.
+- Extracción de los kernels deterministas de la CQT (no son pesos entrenados).
+- Detección de cualquier divergencia de nombres o dimensiones.
 
 No se deberán mezclar pesos de versiones diferentes del modelo.
+
+## 5.1.1. Manifiesto de trazabilidad (obligatorio)
+
+La Fase 1 debe producir un `tensor_provenance.json` que, para cada tensor del
+modelo activo, registre:
+
+| Campo | Descripción |
+|---|---|
+| `tf_name` | Nombre del tensor en el SavedModel de TensorFlow |
+| `onnx_name` | Nombre del inicializador equivalente en ONNX (si existe) |
+| `rust_name` | Nombre definitivo en el Safetensors y en Rust |
+| `shape_tf` | Dimensiones en TensorFlow |
+| `shape_onnx` | Dimensiones en ONNX |
+| `shape_rust` | Dimensiones tras la conversión |
+| `dtype` | Tipo de dato (`float32`) |
+| `role` | Función semántica: `conv_kernel`, `conv_bias`, `bn_gamma`, ... |
+| `transpose` | Permutación aplicada, si la hubo (o `null`) |
+| `max_abs_diff` | Diferencia máxima absoluta contra ONNX (debe ser 0 o ~1e-7) |
+
+Este manifiesto es lo que garantiza que no haya errores silenciosos: cada
+parámetro queda atado a su nombre en los tres formatos y a su valor numérico.
 
 ## 5.2. Identificar todos los parámetros necesarios
 
@@ -82,18 +112,26 @@ Se creará un programa de exportación en Python que:
 7. Exporte los parámetros a Safetensors.
 8. Genere un manifiesto de configuración.
 
-Estructura esperada:
+Estructura esperada. Este es el **directorio canónico único** del proyecto
+para el modelo y sus assets; ninguna otra ruta shall duplicarlo:
 
 ```text
-model-assets/
+models/
 └── basic-pitch/
     └── icassp-2022/
         ├── model.safetensors
         ├── model_config.json
         ├── tensor_inventory.json
+        ├── tensor_provenance.json
         ├── source_metadata.json
+        ├── cqt_kernels.safetensors     <-- kernels CQT deterministas (no pesos)
         └── SHA256SUMS
 ```
+
+El directorio `reference/` (en la raíz del repositorio) contiene los artefactos
+de auditoría y las salidas de referencia; `models/` contiene el modelo
+desplegable. La separación es intencionada: `reference/` es material de
+desarrollo, `models/` es material de distribución.
 
 ## 5.5. Manifiesto de pesos
 
@@ -125,8 +163,12 @@ Antes de utilizarlos desde Rust, se ejecutarán las siguientes comprobaciones:
 - Los valores no contienen `NaN` ni infinitos.
 - Los kernels recuperados mediante la transformación inversa coinciden con los originales.
 - El archivo Safetensors puede leerse correctamente.
+- Cada tensor coincide numéricamente con su equivalente ONNX (`max_abs_diff` ~ 0).
+- Cada tensor declarado en `tensor_provenance.json` existe en los tres formatos.
+- Los kernels de CQT extraídos tienen las dimensiones esperadas
+  (`[36, 1, 1, 256]` real e imaginario, `[1, 1, 1, 256]` lowpass).
 
-**Entregable de la fase:** `model.safetensors`, manifiesto y herramientas reproducibles de extracción.
+**Entregable de la fase:** `model.safetensors`, manifiesto, manifiesto de trazabilidad y herramientas reproducibles de extracción.
 
 **Criterio de aceptación:** todos los pesos del modelo activo estarán disponibles y validados antes de comenzar a construir la red en Candle.
 

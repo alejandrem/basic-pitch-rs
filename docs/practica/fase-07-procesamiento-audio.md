@@ -28,7 +28,29 @@ Cuando el archivo tenga varios canales, se deberá realizar la misma conversión
 
 No se deberá seleccionar arbitrariamente el canal izquierdo ni descartar el derecho.
 
-Se deberá comprobar cómo se comporta la conversión con archivos estéreo, señales desfasadas y canales con amplitudes diferentes.
+### 3.2.1. Corrección: mono por promedio, y ANTES del remuestreo
+
+`librosa.load(path, sr=22050, mono=True)` ejecuta, en este orden exacto:
+
+```python
+y, sr_native = soundfile_load(path, ...)   # decodifica multicanal
+if mono:
+    y = to_mono(y)                          # 1. PROMEDIO de canales
+if sr is not None:
+    y = resample(y, orig_sr=sr_native, target_sr=sr, res_type=res_type)  # 2. remuestreo
+```
+
+Consecuencias obligatorias:
+
+- La conversión a mono es el **promedio aritmético** de los canales
+  (`librosa.to_mono` usa `np.mean`), no la suma ni un canal concreto.
+- La conversión a mono ocurre **antes** del remuestreo, no después. Cambiar el
+  orden produce una señal distinta y, por tanto, un CQT distinto.
+- El promedio se calcula sobre los canales de la señal decodificada, con la
+  precisión del `dtype` de lectura (`float32`).
+
+Se deberá comprobar cómo se comporta la conversión con archivos estéreo,
+señales desfasadas y canales con amplitudes diferentes.
 
 ## 3.3. Remuestreo
 
@@ -38,7 +60,56 @@ Toda señal se convertirá a:
 22050 Hz
 ```
 
-El remuestreador elegido será `rubato`, sujeto a validación contra el proceso empleado por la versión de referencia de `librosa`.
+El remuestreador elegido será **`soxr` en modo `HQ`**, equivalente al
+`res_type="soxr_hq"` que usa `librosa` por defecto en la versión de referencia
+fijada.
+
+### 3.3.1. Corrección: `soxr_hq`, no `rubato`, y versiones fijadas
+
+El `res_type` por defecto de `librosa.load` **depende de la versión**:
+
+| librosa | `res_type` por defecto | Motor |
+|---|---|---|
+| 0.8 / 0.9 | `kaiser_best` | `resampy` |
+| >= 0.10 | `soxr_hq` | `soxr` |
+
+La versión de referencia fijada es **librosa 0.10.2.post1**, por lo que la
+referencia usa **`soxr_hq`**. `rubato` no es bit-idéntico a `soxr_hq`: produce
+un audio ligeramente distinto, lo que desplaza el CQT y, por tanto, las notas
+detectadas. Se descarta `rubato` para el remuestreo de producción.
+
+**Aviso importante:** usar `soxr` en Rust garantiza el mismo *algoritmo* de
+remuestreo, pero **no** garantiza igualdad muestra a muestra, porque el
+decodificador de audio puede diferir (librosa usa `soundfile` / `libsndfile`;
+Rust usará `symphonia`). La diferencia se medirá en la Fase 7 y se documentará
+como tolerancia asumida, no como error.
+
+En consecuencia, el plan de validación debe comparar:
+
+1. La señal completa (decodificación + mono + remuestreo) contra la referencia,
+   midiendo la diferencia y su efecto en el CQT.
+2. El resto de etapas (CQT en adelante) con la **misma** entrada de audio para
+   aislar el error del remuestreo del error del frontend.
+
+### 3.3.2. Versiones a fijar
+
+| Componente | Versión fijada | Motivo |
+|---|---|---|
+| Python | 3.11.18 | Requisito de TensorFlow 2.15 |
+| TensorFlow | 2.15.0 | Versión de referencia |
+| librosa | 0.10.2.post1 | Define `res_type='soxr_hq'` |
+| numpy | 1.26.4 | `<2` requerido por TF 2.15 |
+| soxr | la que resuelva librosa 0.10.2 | Motor de remuestreo de la referencia |
+
+El entorno de referencia se crea con `uv`:
+
+```bash
+uv venv --python 3.11 .venv
+uv pip install --python .venv/bin/python \
+  "tensorflow==2.15.0.post1" "librosa==0.10.2.post1" \
+  "pretty_midi>=0.2.9" "mir_eval>=0.6.0" \
+  "resampy>=0.2.2,<0.4.3" "safetensors>=0.4" "numpy<2"
+```
 
 Se deberá prestar especial atención a:
 

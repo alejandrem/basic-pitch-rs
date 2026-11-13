@@ -72,11 +72,29 @@ basic-pitch-rs/
 │   └── weight-export/
 │       ├── inspect_model.py
 │       ├── export_weights.py
-│       └── validate_weights.py
+│       ├── validate_weights.py
+│       └── tensor_provenance.py
 │
-├── models/
+├── reference/                      <-- artefactos de auditoria (Fase 0)
+│   ├── model_inventory.json
+│   ├── model_summary.txt
+│   ├── model_config.json
+│   ├── tensor_provenance.json
+│   ├── reference_metadata.json
+│   └── reference_outputs/
+│
+├── models/                         <-- DIRECTORIO CANONICO del modelo
 │   └── basic-pitch/
 │       └── icassp-2022/
+│           ├── model.safetensors
+│           ├── model_config.json
+│           ├── tensor_inventory.json
+│           ├── tensor_provenance.json
+│           ├── source_metadata.json
+│           ├── cqt_kernels.safetensors
+│           └── SHA256SUMS
+│
+├── .venv/                          <-- entorno Python de referencia (uv)
 │
 ├── tests/
 │   ├── fixtures/
@@ -88,6 +106,20 @@ basic-pitch-rs/
 └── examples/
     └── transcribe.rs
 ```
+
+**Regla de directorios canónicos.** Cada tipo de artefacto tiene exactamente
+una ubicación:
+
+| Artefacto | Ubicación única | Naturaleza |
+|---|---|---|
+| Modelo desplegable y sus assets | `models/basic-pitch/icassp-2022/` | distribución |
+| Artefactos de auditoría y referencias | `reference/` | desarrollo |
+| Scripts de extracción | `tools/weight-export/` | desarrollo |
+| Entorno Python de referencia | `.venv/` | desarrollo (ignorada por git) |
+| Código Rust | `crates/` | producción |
+
+No se crearán rutas alternativas ni copias. En particular, `model-assets/` no
+existe: el nombre canónico es `models/`.
 
 Cada crate tendrá una responsabilidad específica. No se deberá colocar todo el procesamiento en un único archivo `main.rs`.
 
@@ -101,7 +133,7 @@ Se evaluarán e incorporarán las siguientes bibliotecas:
 | `candle-nn` | Capas y operaciones neuronales |
 | `safetensors` | Herramientas de lectura y escritura del formato de pesos, cuando sea necesario |
 | `symphonia` | Decodificación de formatos de audio |
-| `rubato` | Remuestreo de audio |
+| `soxr` (con FFI a `libsoxr`) | Remuestreo de audio, equivalente a `soxr_hq` de librosa |
 | `midly` | Lectura y escritura MIDI |
 | `serde` | Serialización de configuraciones |
 | `serde_json` | Configuración y manifiestos JSON |
@@ -109,6 +141,10 @@ Se evaluarán e incorporarán las siguientes bibliotecas:
 | `thiserror` | Definición de errores de las bibliotecas |
 | `tracing` | Registro de eventos y diagnóstico |
 | `tempfile` | Pruebas con archivos temporales |
+
+Nota sobre el remuestreo: `rubato` queda **descartado** por no ser
+bit-idéntico a `soxr_hq`, que es lo que usa la referencia (librosa 0.10.2).
+Ver `docs/practica/fase-07-procesamiento-audio.md`, apartado 3.3.1.
 
 Las versiones se fijarán en `Cargo.toml` y `Cargo.lock` después de comprobar la compatibilidad entre ellas.
 

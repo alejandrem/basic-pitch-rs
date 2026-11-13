@@ -30,6 +30,36 @@ Para esta implementación se deberán reproducir:
 
 Los parámetros finales se extraerán de la configuración real del modelo.
 
+## 4.1.1. Corrección: la CQT produce 309 bins, no 264
+
+Este es el error de mayor impacto potencial de todo el proyecto. La CQT
+produce **309** bins de frecuencia; la reducción a 264 ocurre después, dentro de
+Harmonic Stacking (Fase 5).
+
+```python
+MAX_N_SEMITONES = int(np.floor(12.0 * np.log2(0.5 * 22050 / 27.5)))   # 103
+n_semitones      = min(ceil(12.0 * log2(8)) + 88, MAX_N_SEMITONES)      # 103
+n_bins           = n_semitones * CONTOURS_BINS_PER_SEMITONE            # 309
+```
+
+```text
+CQT               -> (batch, 172, 309)
+NormalizedLog     -> (batch, 172, 309)
+BatchNorm inicial -> (batch, 172, 309, 1)
+HarmonicStacking  -> (batch, 172, 264, 8)   <-- truncado aqui
+```
+
+Los 264 bins de salida existen para que los armónicos superiores (hasta el
+desplazamiento +101) dispongan de contenido. Implementar la CQT con 264 bins
+directamente produce un modelo numéricamente incorrecto, con error silencioso
+hasta las notas finales.
+
+Confirmación independiente: el inicializador `model_1/cq_t2010v2_1/Sqrt` del
+ONNX oficial tiene dimensiones `[309, 1, 1]`.
+
+Los parámetros verificados de la CQT están recogidos en
+`docs/teoria/fase-03-espe-tecnicas.md` (apartado 3.1.2).
+
 ## 4.2. Reproducir NNAudio CQT
 
 La capa oficial utiliza una variante de CQT con procesamiento multirresolución y submuestreo.
@@ -49,6 +79,35 @@ La implementación deberá reproducir las operaciones de:
 Los kernels CQT son parámetros deterministas generados a partir de una configuración; no deben confundirse con los pesos entrenados de la red neuronal.
 
 Se podrán generar desde Rust o exportar como recursos calculados durante el desarrollo, siempre que la ejecución final no necesite Python.
+
+### 4.2.1. Procedimiento recomendado: extraer los kernels del ONNX oficial
+
+Reimplementar `create_cqt_kernels` y `scipy.signal.firwin2` en Rust es posible,
+pero es la parte con mayor riesgo de perder precisión numérica. El artefacto
+ONNX oficial local ya contiene los kernels horneados como constantes:
+
+| Inicializador ONNX | Dimensiones | Contenido |
+|---|---|---|
+| `const_fold_opt__664` | `[36, 1, 1, 256]` | kernel CQT, parte real |
+| `const_fold_opt__655` | `[36, 1, 1, 256]` | kernel CQT, parte imaginaria |
+| `const_fold_opt__734` | `[1, 1, 1, 256]` | filtro lowpass `firwin2` |
+
+La estrategia recomendada es:
+
+1. En la Fase 1, extraer esos tres tensores y el factor de normalización
+   `sqrt(lengths)` (`[309, 1, 1]`) a `models/basic-pitch/icassp-2022/cqt_kernels.safetensors`.
+2. En Rust, implementar la **aritmética** de la CQT (padding reflect, conv1d
+   sobre el kernel, submuestreo multioctava, magnitud, normalización) usando
+   esos kernels como datos.
+3. Verificar contra la salida de TensorFlow en la Fase 7.
+
+Esto elimina la reimplementación de `firwin2` y del diseño de ventanas
+scipy, y es coherente con el principio del plan de que "Python es solo una
+herramienta de desarrollo": los kernels se generan una vez y se distribuyen
+como asset.
+
+Si se opta por la reimplementación completa en Rust, la equivalencia numérica
+deberá verificarse explícitamente contra el ONNX antes de continuar.
 
 La primera versión deberá priorizar la coincidencia numérica con la referencia. Las optimizaciones podrán implementarse posteriormente.
 
@@ -85,7 +144,43 @@ Se deberán recuperar del modelo los parámetros originales:
 
 La operación en Rust se ejecutará en modo de inferencia.
 
-No se deberán calcular estadísticas nuevas a partir de cada audio ni actualizar los parámetros almacenados.
+No se deberán calcular estadísticas nuevas a partir de cada audio ni actualizar
+los parámetros almacenados.
+
+### 4.4.1. Corrección: un único canal, estadísticas escalares, epsilon de Keras
+
+La BatchNorm inicial se aplica **después** de `expand_dims`, sobre un tensor de
+forma `(batch, 172, 309, 1)`:
+
+```python
+x = tf.expand_dims(x, -1)        # (batch, 172, 309, 1)
+x = tfkl.BatchNormalization()(x)  # axis = -1, 1 solo canal
+```
+
+Consecuencias que deben respetarse:
+
+- El eje de normalización es el **último** (los canales), y hay **un único
+  canal**. Por tanto `gamma`, `beta`, `moving_mean` y `moving_variance` tienen
+  longitud **1**: son escalares, no un vector por bin de frecuencia.
+- La normalización se calcula sobre las dimensiones `(batch, time, freq)`, es
+  decir, una única estadística global por muestra, **no** una por bin de
+  frecuencia. Implementar un BN por bin de frecuencia daría un resultado
+  completamente distinto.
+- `epsilon` debe tomarse del modelo Keras: **`0.001`** (valor por defecto de
+  `tf.keras.layers.BatchNormalization`). El atributo `epsilon` de
+  `FusedBatchNormV3` en el ONNX oficial vale `1e-5` y **no** es el valor
+  correcto para este modelo, porque el ONNX fusiona la normalización con
+  operaciones distintas. La fuente canónica del epsilon es TensorFlow.
+
+### 4.4.2. Las tres BatchNorm del modelo
+
+| # | Posición | Canales | `gamma`/`beta`/`mean`/`var` | `epsilon` |
+|---|---|---:|---|---:|
+| 1 | Inicial, tras NormalizedLog | 1 | longitud 1 | 0.001 |
+| 2 | Rama de contornos, tras conv (3,39) | 8 | longitud 8 | 0.001 |
+| 3 | Rama de onsets, tras conv (5,5) | 32 | longitud 32 | 0.001 |
+
+La rama de notas **no** tiene BatchNorm (solo ReLU).
 
 ## 4.5. Pruebas del frontend
 

@@ -6,6 +6,9 @@
 
 La capa toma la representación CQT y construye diferentes canales desplazando el eje de frecuencias.
 
+**Entrada:** `(batch, 172, 309, 1)` — los 309 bins de la CQT.
+**Salida:** `(batch, 172, 264, 8)` — trunca a 264 bins, 8 canales armónicos.
+
 Para el modelo predeterminado se utilizarán:
 
 ```text
@@ -24,11 +27,34 @@ shift = round(
 )
 ```
 
-Se deberá reproducir el comportamiento de redondeo de TensorFlow.
+Se deberá reproducir el comportamiento de redondeo de TensorFlow (`tf.math.round`,
+que redondea al par en los empates). Los valores resultantes son:
+
+| Armónico | `shift` (bins) |
+|---:|---:|
+| 0.5 | -36 |
+| 1 | 0 |
+| 2 | 36 |
+| 3 | 57 |
+| 4 | 72 |
+| 5 | 84 |
+| 6 | 93 |
+| 7 | 101 |
 
 ## 5.2. Padding y desplazamientos
 
-Cuando un canal se desplaza hacia una dirección, las posiciones que quedan fuera de los límites deberán rellenarse con ceros.
+El relleno con ceros es **asimétrico** y esa asimetría es obligatoria. Tomando
+como referencia `basic_pitch/nn.py`, clase `HarmonicStacking`:
+
+| Caso | Operación | Efecto |
+|---|---|---|
+| `shift == 0` | `padded = x` | canal idéntico a la entrada |
+| `shift > 0` | `pad(x[:, :, shift:, :], [[0,0],[0,0],[0,shift],[0,0]])` | descarta los `shift` bins **bajos**, rellena con ceros los **altos**. `out[i] = x[i + shift]` |
+| `shift < 0` | `pad(x[:, :, :shift, :], [[0,0],[0,0],[-shift,0],[0,0]])` | rellena con ceros los bins **bajos**, conserva el resto. `out[i] = x[i + shift]` |
+
+En ambos casos no negativo el desplazamiento equivale a `out[i] = x[i + shift]`
+con ceros donde el índice sale de rango; la diferencia está en **dónde** se
+colocan esos ceros.
 
 El algoritmo no debe:
 
@@ -38,7 +64,10 @@ El algoritmo no debe:
 - Interpolar frecuencias.
 - Sustituir los ceros por el mínimo de la señal.
 
-Después de generar los canales, se conservará el rango de frecuencias requerido por el modelo.
+Después de generar los canales, se conservará el rango de frecuencias requerido
+por el modelo: se trunca el eje de frecuencias a los primeros `264` bins
+(`x[:, :, :n_output_freqs, :]`). La truncación ocurre **después** de concatenar
+los 8 canales, no antes de desplazar.
 
 ## 5.3. Dimensiones
 
