@@ -1,0 +1,16 @@
+[package]
+name = "basic-pitch-reference-npy"
+description = "Lector de archivos .npy de referencia (solo desarrollo)"
+edition.workspace = true
+version.workspace = true
+rust-version.workspace = true
+license.workspace = true
+# Crate de apoyo para el desarrollo: solo se usa en tests y ejemplos, nunca
+# en el runtime del motor.
+publish = false
+
+[dependencies]
+thiserror.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

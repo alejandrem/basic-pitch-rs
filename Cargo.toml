@@ -7,6 +7,7 @@ members = [
     "crates/basic-pitch-model",
     "crates/transcription",
     "crates/midi-io",
+    "crates/reference-npy",
 ]
 
 [workspace.package]
@@ -52,6 +53,7 @@ basic-pitch-cqt = { path = "crates/cqt" }
 basic-pitch-model = { path = "crates/basic-pitch-model" }
 basic-pitch-transcription = { path = "crates/transcription" }
 basic-pitch-midi-io = { path = "crates/midi-io" }
+basic-pitch-reference-npy = { path = "crates/reference-npy" }
 
 [package]
 name = "basic-pitch"
