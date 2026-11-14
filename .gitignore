@@ -20,3 +20,7 @@ __pycache__/
 reference/audio_reference/peso_del_silencio.wav
 reference/notes/peso_del_silencio_notes.npy
 reference/notes/peso_del_silencio_upstream.mid
+
+# Audios de prueba del autor del proyecto, en la raiz.
+amaris.mp3
+amaris_transcrito.wav
