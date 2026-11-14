@@ -10,6 +10,10 @@
 # Salidas temporales
 *.mid
 
+# ...pero las transcripciones del proyecto si se versionan: son pequenas
+# y son el resultado del trabajo.
+!transcripciones/*.mid
+
 # Cache de Python
 __pycache__/
 *.py[cod]
@@ -21,6 +25,9 @@ reference/audio_reference/peso_del_silencio.wav
 reference/notes/peso_del_silencio_notes.npy
 reference/notes/peso_del_silencio_upstream.mid
 
-# Audios de prueba del autor del proyecto, en la raiz.
+# Audios de prueba del autor del proyecto: son material personal y el WAV
+# renderizado pesa 29 MB.
 amaris.mp3
 amaris_transcrito.wav
+transcripciones/*.mp3
+transcripciones/*.wav

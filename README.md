@@ -131,6 +131,66 @@ Generación del archivo MIDI
 Archivo MIDI de salida
 ```
 
+## Uso
+
+### Transcribir un archivo de audio a MIDI
+
+```bash
+cargo run --release -- transcribe cancion.mp3 -o cancion.mid
+```
+
+El comando acepta **WAV, MP3, FLAC, OGG y M4A** (los que decodifica
+Symphonia). Si no se indica `-o`, el MIDI se escribe junto al audio de
+entrada.
+
+```text
+$ basic-pitch transcribe amaris.mp3 -o amaris.mid
+amaris.mp3 -> amaris.mid  (1842 notas, 163.71 s de audio)
+```
+
+El MIDI usa **piano acústico** (`Acoustic Grand Piano`, programa GM 0) y
+suena a 120 BPM.
+
+### Convertir un MIDI a audio (para oírlo)
+
+Un archivo `.mid` **no es audio**: es una lista de notas. Para poder
+oír una transcripción hay que renderizarla a audio, que es un proceso
+inverso y no forma parte de la transcripción.
+
+```bash
+fluidsynth -F cancion.wav -r 44100 -g 0.7 \
+    .venv/lib/python3.11/site-packages/pretty_midi/TimGM6mb.sf2 cancion.mid
+```
+
+También está disponible como script, que busca el soundfont por su sitio:
+
+```bash
+.venv/bin/python tools/weight-export/render_midi.py cancion.mid cancion.wav
+```
+
+### Los dos sentidos
+
+```text
+  audio real  --transcribe-->  MIDI  --render_midi-->  audio (para oír)
+```
+
+Lo segundo es un **renderizado**, no una transcripción: el MIDI no tiene
+sonido hasta que un sintetizador lo convierte en audio. El soundfont
+`TimGM6mb` que se usa es el mismo que trae `pretty_midi`, con el que el
+upstream de Spotify evalúa sus resultados.
+
+### Comprobar la fidelidad
+
+El motor se compara nota a nota con la implementación original:
+
+```bash
+# Las notas del upstream, sobre un audio.
+.venv/bin/python tools/weight-export/reference_notes.py cancion.mp3
+
+# La validación completa.
+cargo test --release -p basic-pitch-transcription --test notes_reference
+```
+
 ## Compatibilidad con el modelo original
 
 Uno de los principales objetivos es mantener la compatibilidad con la implementación original de Basic Pitch.
@@ -151,17 +211,20 @@ Para comprobar la fidelidad de la implementación se realizan comparaciones num�
 
 El proyecto se desarrolla de manera incremental.
 
-| Componente | Estado |
-|---|---|
-| Estructura del proyecto Rust | En desarrollo |
-| Decodificación de audio | En desarrollo |
-| Preprocesamiento de audio | En desarrollo |
-| Frontend CQT | En desarrollo |
-| Harmonic Stacking | En desarrollo |
-| Arquitectura de la red neuronal | En desarrollo |
-| Inferencia del modelo | Pendiente de validación |
-| Procesamiento posterior de MIDI | Pendiente |
-| Transcripción de extremo a extremo | Pendiente |
+| Componente | Estado | Validado contra |
+|---|---|---|
+| Estructura del proyecto Rust | Completo | - |
+| Decodificación de audio (5 formatos) | Completo | `soundfile` del upstream: 2.7e-8 |
+| Preprocesamiento de audio | Completo | ídem |
+| Frontend CQT | Completo | TensorFlow: 5.7e-6 (epsilon de `float32`) |
+| Harmonic Stacking | Completo | TensorFlow: 3.4e-3 |
+| Arquitectura de la red neuronal | Completo | TensorFlow: 1.7e-5 (nota), 5.3e-5 (onset) |
+| Reconstrucción temporal | Completo | `unwrap_output` del upstream, de extremo a extremo |
+| Detección polifónica de notas | Completo | `output_to_notes_polyphonic` del upstream: **0 desajustes** |
+| Escritura de MIDI | Completo | - |
+| Transcripción de extremo a extremo | Completo | - |
+| Pitch bend | Pendiente | - |
+| API pública | Pendiente | - |
 
 ## Visión a futuro
 
