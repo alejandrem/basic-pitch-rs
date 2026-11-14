@@ -135,6 +135,7 @@ impl OnsetBranch {
         let conv1 = conv2d_same(x, &self.conv1_weight, pad, CONV1_STRIDE)?;
         let conv1 = conv1.broadcast_add(&self.conv1_bias.reshape((1, 32, 1, 1))?)?;
 
+
         // --- BatchNorm (32 canales) + ReLU ---
         let bn = batch_norm(
             &conv1,
@@ -157,6 +158,15 @@ impl OnsetBranch {
         let conv2 = sigmoid(&conv2)?;
 
         // `onset` es el aplanado: (batch, 1, 172, 88) -> (batch, 172, 88).
-        conv2.squeeze(1)?.transpose(1, 2)?.contiguous()
+        //
+        // OJO: aqui NO hay que transponer. `FlattenFreqCh` de TensorFlow
+        // aplana `(batch, 172, 88, 1)` a `(batch, 172, 88)`: elimina el eje
+        // de canales y conserva el orden (tiempo, frecuencia). El
+        // equivalente en NCHW es `squeeze(1)` y nada mas; un
+        // `transpose(1, 2)` de mas devolveria (batch, 88, 172).
+        let onset = conv2.squeeze(1)?.contiguous()?;
+
+
+        Ok(onset)
     }
 }

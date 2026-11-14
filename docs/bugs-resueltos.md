@@ -664,6 +664,131 @@ contenido sea el correcto: se mide la magnitud en la frecuencia de cada
 canal y el desfase entre canales. Ademas se descubre que con 1,5
 segundos de audio la referencia produce **DOS** ventanas y no una,
 porque el relleno inicial (3840) se pasa del salto (36164).
+### B-32. Las tres salidas del modelo salian con el tiempo y la frecuencia invertidos
+
+**Sintoma.** Ninguno en el momento: el programa no fallaba. Pero las
+salidas del modelo tenian las formas equivocadas:
+
+| Salida | Forma real | Forma correcta |
+|---|---|---|
+| `contour` | `(batch, 264, 172)` | `(batch, 172, 264)` |
+| `note` | `(batch, 88, 172)` | `(batch, 172, 88)` |
+| `onset` | `(batch, 88, 172)` | `(batch, 172, 88)` |
+
+**Causa.** Un `transpose(1, 2)` de mas al final de cada rama:
+
+```rust
+// contour.rs, notes.rs, onsets.rs
+let salida = conv.squeeze(1)?.transpose(1, 2)?.contiguous()?;
+```
+
+`squeeze(1)` ya da `(batch, 172, 264)`, que es la forma correcta. El
+`transpose` la convertia en `(batch, 264, 172)`.
+
+La referencia (`FlattenFreqCh`) **solo aplana el eje de canales**:
+`(batch, 172, 264, 1) -> (batch, 172, 264)`, sin transponer nada. Como el
+trabajo interno es NCHW, el equivalente es `squeeze(1)` y nada mas.
+
+**Como se detecto.** Comparando las salidas de la red con la referencia de
+TensorFlow: al transponerlas a mano, coincidian con 4.4e-5 (contour),
+1.7e-5 (note) y 5.3e-5 (onset). Es decir, **la red era correcta**; lo
+unico que estaba mal era el volteo final.
+
+**Por que no lo detectaron los tests de P1.** Porque no existia ninguna
+comparacion de las salidas de la red contra la referencia: eso es la
+Fase 7 (P3). Los tests de P1 solo comprobaban formas *intermedias*.
+
+**Impacto.** En la Fase 9, el postprocesamiento habria recibido el tiempo
+de una nota como si fuera un pitch: el `note` de `(batch, 88, 172)` se
+interpretaria como 88 "frames" con 172 valores de nota cada uno. Habria
+sido un desastre silencioso, del tipo que hace que el modelo "no
+suene".
+
+**Solucion.** Quitar el `transpose` de las tres ramas, y documentar en
+cada sitio por que no hay que transponer (para que nadie lo vuelva a
+poner).
+
+**Tests de regresion** (`crates/basic-pitch-model/tests/model_output.rs`):
+
+- la forma de las tres salidas;
+- una propiedad **estructural** que no depende de la forma: si la entrada
+  es constante en el tiempo, la salida tiene que ser constante en el
+  tiempo (las convoluciones son invariantes a la traslacion temporal y la
+  BatchNorm en modo inferencia no calcula estadisticas sobre el tiempo);
+- y la simetrica: si la entrada es constante en la frecuencia, la salida
+  tiene que ser constante en la frecuencia dentro de cada frame.
+
+### B-33. El validador del contrato no validaba los campos que el codigo usa
+
+**Sintoma.** `ModelConfig::validate()` daba el visto bueno a una
+configuracion que hacia que el modelo usara **264 bins de CQT en vez de
+309**, que es exactamente el error B-01 que el proyecto lleva dos fases
+guardando.
+
+**Causa.** La configuracion tiene **dos campos con el mismo significado**:
+`frequency.cqt_n_bins` (un resumen) y `cqt.n_bins` (el detalle). El
+frontend lee el segundo; el validador comprobaba el primero. Con
+`cqt.n_bins = 264` y `frequency.cqt_n_bins = 309`, todo pasaba.
+
+Ademas, `validate()` comprobaba siete cosas y el codigo leia muchas mas:
+`cqt.hop_length`, `n_fft`, `n_octaves`, `n_filters`, `sr`, `fmin`,
+`early_downsample`, `downsample_factor`, `pad_mode`, `basis_norm`,
+`harmonic_stacking.shifts`, `n_output_freqs`, `input_n_bins`,
+`bins_per_semitone`, el contrato de audio y el de ventaneo.
+
+**El caso de `shifts` es el masinteresting.** El codigo **recalcula** los
+desplazamientos a partir de los armonicos y no lee el campo `shifts` del
+JSON. Un `shifts` equivocado en el fichero nooria nada: el campo era
+decorativo y podia mentir.
+
+**Solucion.**
+
+1. Un bloque de constantes `contrato` con los valores del modelo
+   ICASSP 2022, tomados de `docs/teoria/fase-03-espe-tecnicas.md`, como
+   **fuente de verdad** de la validacion.
+2. `validate()` comprueba **todo** campo que el codigo lee, y ademas que
+   `cqt.n_bins` y `frequency.cqt_n_bins` coincidan.
+3. Los `shifts` declarados se comparan con los calculados.
+4. Los errores se **acumulan** y se devuelven todos juntos: antes
+   fallaba en el primero y habia que reintentar N veces para ver los
+   demas.
+
+**Efecto secundario.** `ModelConfig::example()` (el helper de test) estaba
+incompleto: no tenia las tres capas de BatchNorm, asi que el validador
+nuevo lo rechazo. Se completo, y ahora el ejemplo coincide con el asset.
+
+### B-34. La duracion minima de nota usaba el fps entero en vez del flotante
+
+**Sintoma.** Ninguno con los valores por defecto: 127.7 ms dan 11 frames
+con las dos formulas.
+
+**Causa.** El upstream calcula:
+
+```python
+min_note_len = int(np.round(minimum_note_length / 1000 * (AUDIO_SAMPLE_RATE / FFT_HOP)))
+```
+
+`AUDIO_SAMPLE_RATE / FFT_HOP` es **division flotante**: 86.1328125. Pero
+el codigo usaba `ANNOTATIONS_FPS`, que en `constants.py` es
+`AUDIO_SAMPLE_RATE // FFT_HOP` = **86** (division entera) y sirve para
+otra cosa.
+
+**Por que no se notaba.** Con 127.7 ms, `127.7/1000*86.1328 = 10.99915` y
+`127.7/1000*86 = 10.9822`: los dos redondean a 11.
+
+**Donde si se nota.** Con 5.81 ms: el upstream da 0.50043 -> 1 frame, y el
+valor entero daria 0.49966 -> 0 frames.
+
+**Solucion.** Usar la division flotante, y `round_ties_even` (que es lo que
+hace `np.round`: redondea al par en los empates) en vez de `round`, que
+redondea hacia arriba.
+
+**Aprendizaje.** `ANNOTATIONS_FPS` y `AUDIO_SAMPLE_RATE / FFT_HOP` son
+valores **distintos** que se parecen mucho. El primero es entero a
+proposito en el upstream; el segundo es flotante. Copiar el nombre sin
+mirar la operacion es un error facil de cometer.
+
+
 ## Resumen
 
 | Bloque | Categoria | Cantidad | De ellos silenciosos |
@@ -673,11 +798,22 @@ porque el relleno inicial (3840) se pasa del salto (36164).
 | P1 | Diferencias de API entre versiones | 1 (8 casos) | - |
 | P2 | Trampas de la referencia (documentales) | 4 | 3 |
 | P2 | Bugs del codigo | 8 | 2 |
-| **Total** | | **32** | **15** |
+| P2 | Bugs de la auditoria (A1, A2, A3) | 3 | 2 |
+| **Total** | | **35** | **17** |
 
 Ademas, dos entradas documentan **huecos de cobertura** que no eran
 fallos: B-31 (la matriz de pruebas de la fase 3 estaba casi vacia) y
 B-29 (el parser de `.npy` duplicado).
+
+**Los tres ultimos (B-32, B-33 y B-34) los encontro una auditoria del
+codigo, no un test.** Dos de los tres son silenciosos: el programa no
+falla, devuelve numeros plausibles y el error aparece tres fases mas
+tarde. B-32 habria roto el postprocesamiento musical entero; B-33 habria
+dejado pasar el bug B-01 (264 bins de CQT) por la puerta de atras.
+
+Eso es el argumento de por que una auditoria manual del codigo tiene su
+sitio al lado de los tests: un test compara lo que se le dice que
+compara, y no puede comparar lo que nadie se le ocurre comprobar.
 
 **Los 14 silenciosos** (el programa no falla, devuelve numeros
 plausibles) son los que justifican la validacion etapa a etapa contra

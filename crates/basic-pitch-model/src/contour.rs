@@ -113,11 +113,13 @@ impl ContourBranch {
     /// El eje de canales se elimina en la salida final mediante
     /// `FlattenFreqCh`, que en TensorFlow aplana `(batch, 172, 264, 1)` a
     /// `(batch, 172, 264)` conservando el orden frecuencia-principal.
+    ///
     pub fn forward(&self, x: &Tensor) -> Result<(Tensor, Tensor), candle_core::Error> {
         // --- conv contour (8, 3x39) ---
         let pad = same_padding2d((172, 264), CONV1_KERNEL, (1, 1));
         let conv1 = conv2d_same(x, &self.conv1_weight, pad, (1, 1))?;
         let conv1 = conv1.broadcast_add(&self.conv1_bias.reshape((1, 8, 1, 1))?)?;
+
 
         // --- BatchNorm (8 canales) en modo inferencia ---
         let bn = batch_norm(
@@ -138,9 +140,18 @@ impl ContourBranch {
         let reduced = reduced.broadcast_add(&self.reduced_bias.reshape((1, 1, 1, 1))?)?;
         let reduced = sigmoid(&reduced)?;
 
+
         // La salida `contour` es el aplanado de frecuencia y canales:
         // (batch, 1, 172, 264) -> (batch, 172, 264).
-        let contour = reduced.squeeze(1)?.transpose(1, 2)?.contiguous()?;
+        //
+        // OJO: aqui NO hay que transponer. `FlattenFreqCh` de TensorFlow
+        // aplana `(batch, 172, 264, 1)` a `(batch, 172, 264)`: elimina el
+        // eje de canales y **conserva** el orden (tiempo, frecuencia).
+        // Como el interno es NCHW, el equivalente es `squeeze(1)` y nada
+        // mas. Un `transpose(1, 2)` de mas intercambiaria tiempo y
+        // frecuencia, devolviendo (batch, 264, 172).
+        let contour = reduced.squeeze(1)?.contiguous()?;
+
 
         Ok((contour, reduced))
     }

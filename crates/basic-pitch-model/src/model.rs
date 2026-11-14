@@ -33,15 +33,18 @@ use crate::ModelError;
 ///
 /// # Dimensiones
 ///
-/// | Salida | Forma NHWC (TensorFlow) | Forma NCHW (Candle) |
+/// | Salida | Forma | Equivalente en TensorFlow |
 /// |---|---|---|
-/// | `note` | `(batch, 172, 88)` | `(batch, 88, 172)` |
-/// | `onset` | `(batch, 172, 88)` | `(batch, 88, 172)` |
-/// | `contour` | `(batch, 172, 264)` | `(batch, 264, 172)` |
+/// | `note` | `(batch, 172, 88)` | `(batch, 172, 88)` |
+/// | `onset` | `(batch, 172, 88)` | `(batch, 172, 88)` |
+/// | `contour` | `(batch, 172, 264)` | `(batch, 172, 264)` |
 ///
-/// Las tres son **salidas finales**, con el eje de canales ya eliminado. Las
-/// formas intermedias de cada rama, que si conservan el eje de canales, estan
-/// documentadas en los modulos `contour`, `notes` y `onsets`.
+/// Las tres son **salidas finales**, con el eje de canales ya eliminado, y por
+/// eso su forma es la misma en los dos layouts: el orden es
+/// **(tiempo, frecuencia)**, igual que en TensorFlow.
+///
+/// Los intermedios de cada rama, que si conservan el eje de canales, estan en
+/// NCHW y estan documentados en los modulos `contour`, `notes` y `onsets`.
 #[derive(Debug, Clone)]
 pub struct ModelOutput {
     /// Activacion de notas: `(batch, 172, 88)`.
