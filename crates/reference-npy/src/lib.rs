@@ -213,46 +213,6 @@ fn parse_shape(text: &str) -> Result<Vec<usize>, NpyError> {
         .collect()
 }
 
-/// Escribe un array de `float32` en un archivo `.npy`.
-///
-/// Se usa para volcar las etapas del frontend de Rust y compararlas con la
-/// referencia desde Python, que es donde se hacen los analisis de sensibilidad.
-pub fn write_f32(path: &Path, shape: &[usize], data: &[f32]) -> Result<(), NpyError> {
-    let expected: usize = shape.iter().product();
-    if data.len() != expected {
-        return Err(NpyError::SizeMismatch {
-            expected,
-            actual: data.len(),
-        });
-    }
-
-    let shape_text = shape
-        .iter()
-        .map(|s| s.to_string())
-        .collect::<Vec<_>>()
-        .join(", ");
-    let mut header =
-        format!("{{'descr': '<f4', 'fortran_order': False, 'shape': ({shape_text}), }}");
-    // NumPy alinea la cabecera a 64 bytes.
-    while (10 + header.len() + 1) % 64 != 0 {
-        header.push(' ');
-    }
-    header.push('\n');
-
-    let mut bytes = Vec::with_capacity(10 + header.len() + data.len() * 4);
-    bytes.extend_from_slice(b"\x93NUMPY");
-    bytes.push(1);
-    bytes.push(0);
-    bytes.extend_from_slice(&(header.len() as u16).to_le_bytes());
-    bytes.extend_from_slice(header.as_bytes());
-    for value in data {
-        bytes.extend_from_slice(&value.to_le_bytes());
-    }
-
-    std::fs::write(path, bytes)?;
-    Ok(())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -332,27 +292,5 @@ mod tests {
         assert_eq!(parse_shape("(1, 172, 309)").unwrap(), vec![1, 172, 309]);
         assert_eq!(parse_shape("(43844,)").unwrap(), vec![43844]);
         assert_eq!(parse_shape("()").unwrap(), Vec::<usize>::new());
-    }
-
-    #[test]
-    fn escribir_y_leer_da_la_misma_cosa() {
-        let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("out.npy");
-        let data: Vec<f32> = (0..6).map(|v| v as f32 * 0.5).collect();
-        write_f32(&path, &[1, 2, 3], &data).unwrap();
-
-        let array = read_f32(&path).unwrap();
-        assert_eq!(array.shape, vec![1, 2, 3]);
-        assert_eq!(array.data, data);
-    }
-
-    #[test]
-    fn escribir_con_una_forma_incorrecta_produce_error() {
-        let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("bad.npy");
-        assert!(matches!(
-            write_f32(&path, &[2, 2], &[1.0, 2.0]),
-            Err(NpyError::SizeMismatch { .. })
-        ));
     }
 }

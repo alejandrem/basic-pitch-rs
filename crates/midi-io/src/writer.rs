@@ -52,9 +52,6 @@ pub const DEFAULT_RESOLUTION: u16 = 220;
 /// Tempo inicial por defecto, en pulsos por minuto.
 pub const DEFAULT_TEMPO: f64 = 120.0;
 
-/// Programa GM de `Electric Piano 1`.
-pub const ELECTRIC_PIANO_1: u8 = 4;
-
 /// Valor de pitch bend que representa el centro.
 pub const PITCH_BEND_CENTER: i16 = 8192;
 

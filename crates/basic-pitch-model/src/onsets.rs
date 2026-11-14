@@ -65,6 +65,8 @@ pub const CONV1_KERNEL: (usize, usize) = (5, 5);
 pub const CONV1_STRIDE: (usize, usize) = (1, 3);
 /// Numero de filtros de la convolucion de salida.
 pub const CONV2_FILTERS: usize = 1;
+/// Canales de entrada de la primera convolucion (los 8 armonicos).
+pub const CONV1_IN_CHANNELS: usize = 8;
 /// Kernel de la convolucion de salida, como (tiempo, frecuencia).
 pub const CONV2_KERNEL: (usize, usize) = (3, 3);
 /// Canales de la rama de onsets antes de concatenar.
@@ -102,17 +104,45 @@ impl OnsetBranch {
     pub fn from_weights(weights: &Weights) -> Result<Self, crate::ModelError> {
         Ok(Self {
             conv1_weight: weights
-                .expect(weight_names::CONV1_WEIGHT, &[32, 8, 5, 5])?
+                .expect(
+                    weight_names::CONV1_WEIGHT,
+                    &[
+                        CONV1_FILTERS,
+                        CONV1_IN_CHANNELS,
+                        CONV1_KERNEL.0,
+                        CONV1_KERNEL.1,
+                    ],
+                )?
                 .clone(),
-            conv1_bias: weights.expect(weight_names::CONV1_BIAS, &[32])?.clone(),
-            bn_gamma: weights.expect(weight_names::BN_GAMMA, &[32])?.clone(),
-            bn_beta: weights.expect(weight_names::BN_BETA, &[32])?.clone(),
-            bn_mean: weights.expect(weight_names::BN_MEAN, &[32])?.clone(),
-            bn_var: weights.expect(weight_names::BN_VAR, &[32])?.clone(),
+            conv1_bias: weights
+                .expect(weight_names::CONV1_BIAS, &[CONV1_FILTERS])?
+                .clone(),
+            bn_gamma: weights
+                .expect(weight_names::BN_GAMMA, &[CONV1_FILTERS])?
+                .clone(),
+            bn_beta: weights
+                .expect(weight_names::BN_BETA, &[CONV1_FILTERS])?
+                .clone(),
+            bn_mean: weights
+                .expect(weight_names::BN_MEAN, &[CONV1_FILTERS])?
+                .clone(),
+            bn_var: weights
+                .expect(weight_names::BN_VAR, &[CONV1_FILTERS])?
+                .clone(),
             conv2_weight: weights
-                .expect(weight_names::CONV2_WEIGHT, &[1, CONCAT_CHANNELS, 3, 3])?
+                .expect(
+                    weight_names::CONV2_WEIGHT,
+                    &[
+                        CONV2_FILTERS,
+                        CONCAT_CHANNELS,
+                        CONV2_KERNEL.0,
+                        CONV2_KERNEL.1,
+                    ],
+                )?
                 .clone(),
-            conv2_bias: weights.expect(weight_names::CONV2_BIAS, &[1])?.clone(),
+            conv2_bias: weights
+                .expect(weight_names::CONV2_BIAS, &[CONV2_FILTERS])?
+                .clone(),
         })
     }
 

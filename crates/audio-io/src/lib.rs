@@ -71,15 +71,6 @@ impl AudioBuffer {
         }
     }
 
-    /// Duracion en segundos.
-    pub fn duration_secs(&self) -> f64 {
-        if self.sample_rate == 0 {
-            0.0
-        } else {
-            self.frames() as f64 / self.sample_rate as f64
-        }
-    }
-
     /// Devuelve el canal `index` de una senal multicanal.
     ///
     /// Devuelve `None` si el canal no existe.

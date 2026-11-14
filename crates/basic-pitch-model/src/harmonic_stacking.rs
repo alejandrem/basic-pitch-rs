@@ -55,6 +55,10 @@ pub fn harmonic_shifts(harmonics: &[f64], bins_per_semitone: usize) -> Vec<i64> 
 ///
 /// `bins` es el eje de frecuencias de una muestra: un vector plano.
 /// Devuelve el canal desplazado, con ceros en las posiciones fuera de rango.
+///
+/// Es la **implementacion de referencia en vectores**: la de tensores (que
+/// es la que usa el modelo) se comprueba contra esta en los tests, para
+/// que las dos no puedan divergir sin que nadie se entere.
 pub fn shift_channel(bins: &[f32], shift: i64) -> Vec<f32> {
     let n = bins.len();
     let mut out = vec![0.0f32; n];

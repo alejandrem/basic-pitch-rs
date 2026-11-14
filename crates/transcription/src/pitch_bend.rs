@@ -1,5 +1,15 @@
 //! Estimacion de pitch bend a partir de los contornos de frecuencia.
 //!
+//! # ESTA FASE 10, AUN NO INTEGRADA
+//!
+//! El calculo de pitch bend esta implementado y probado, pero **todavia no
+//! se usa**: falta conectarlo con la deteccion de notas, que es lo que
+//! haria que el MIDI llevara los bends. El campo `pitch_bend` del evento
+//! musical existe, pero se rellena con `None`.
+//!
+//! No es codigo basura: es la Fase 10 escrita por adelantado, con la
+//! formula del upstream. Lo que falta es el cableado, no el calculo.
+//!
 //! # Conversion de nota MIDI a indice de contorno
 //!
 //! ```python
@@ -24,17 +34,19 @@
 //! El desplazamiento se expresa en **unidades de 1/3 de semitono**, que es la
 //! resolucion de la matriz de contornos.
 
+use crate::note_detection::MIDI_OFFSET;
+
 /// Bins por semitono de la matriz de contornos.
-pub const CONTOURS_BINS_PER_SEMITONE: usize = 3;
+///
+/// Viene del crate `cqt`, que es donde vive el contrato del modelo: una
+/// sola fuente de verdad.
+pub use basic_pitch_cqt::CONTOURS_BINS_PER_SEMITONE;
 
 /// Frecuencia base del modelo, en Hz (nota MIDI 21, A0).
 pub const ANNOTATIONS_BASE_FREQUENCY: f64 = 27.5;
 
-/// Desplazamiento entre el indice MIDI y el indice de la matriz de notas.
-pub const MIDI_OFFSET: u8 = 21;
-
 /// Numero de bins de la matriz de contornos.
-pub const N_FREQ_BINS_CONTOURS: usize = 264;
+pub use basic_pitch_cqt::N_FREQ_BINS_CONTOURS;
 
 /// Tolerancia de busqueda, en bins.
 pub const N_BINS_TOLERANCE: i64 = 25;

@@ -72,6 +72,9 @@ impl NoteEvent {
     }
 
     /// Anade una secuencia de pitch bend.
+    ///
+    /// Lo usara la Fase 10 (estimacion de pitch bend); por ahora el
+    /// detector de notas no lo rellena.
     pub fn with_pitch_bend(mut self, pitch_bend: Option<Vec<i16>>) -> Self {
         self.pitch_bend = pitch_bend;
         self

@@ -63,13 +63,23 @@ impl NotesBranch {
     pub fn from_weights(weights: &Weights) -> Result<Self, crate::ModelError> {
         Ok(Self {
             conv1_weight: weights
-                .expect(weight_names::CONV1_WEIGHT, &[32, 1, 7, 7])?
+                .expect(
+                    weight_names::CONV1_WEIGHT,
+                    &[CONV1_FILTERS, 1, CONV1_KERNEL.0, CONV1_KERNEL.1],
+                )?
                 .clone(),
-            conv1_bias: weights.expect(weight_names::CONV1_BIAS, &[32])?.clone(),
+            conv1_bias: weights
+                .expect(weight_names::CONV1_BIAS, &[CONV1_FILTERS])?
+                .clone(),
             conv2_weight: weights
-                .expect(weight_names::CONV2_WEIGHT, &[1, 32, 7, 3])?
+                .expect(
+                    weight_names::CONV2_WEIGHT,
+                    &[CONV2_FILTERS, CONV1_FILTERS, CONV2_KERNEL.0, CONV2_KERNEL.1],
+                )?
                 .clone(),
-            conv2_bias: weights.expect(weight_names::CONV2_BIAS, &[1])?.clone(),
+            conv2_bias: weights
+                .expect(weight_names::CONV2_BIAS, &[CONV2_FILTERS])?
+                .clone(),
         })
     }
 

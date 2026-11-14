@@ -86,17 +86,45 @@ impl ContourBranch {
     pub fn from_weights(weights: &Weights) -> Result<Self, crate::ModelError> {
         Ok(Self {
             conv1_weight: weights
-                .expect(weight_names::CONV1_WEIGHT, &[8, 8, 3, 39])?
+                .expect(
+                    weight_names::CONV1_WEIGHT,
+                    &[
+                        CONV1_FILTERS,
+                        CONV1_IN_CHANNELS,
+                        CONV1_KERNEL.0,
+                        CONV1_KERNEL.1,
+                    ],
+                )?
                 .clone(),
-            conv1_bias: weights.expect(weight_names::CONV1_BIAS, &[8])?.clone(),
-            bn_gamma: weights.expect(weight_names::BN_GAMMA, &[8])?.clone(),
-            bn_beta: weights.expect(weight_names::BN_BETA, &[8])?.clone(),
-            bn_mean: weights.expect(weight_names::BN_MEAN, &[8])?.clone(),
-            bn_var: weights.expect(weight_names::BN_VAR, &[8])?.clone(),
+            conv1_bias: weights
+                .expect(weight_names::CONV1_BIAS, &[CONV1_FILTERS])?
+                .clone(),
+            bn_gamma: weights
+                .expect(weight_names::BN_GAMMA, &[CONV1_FILTERS])?
+                .clone(),
+            bn_beta: weights
+                .expect(weight_names::BN_BETA, &[CONV1_FILTERS])?
+                .clone(),
+            bn_mean: weights
+                .expect(weight_names::BN_MEAN, &[CONV1_FILTERS])?
+                .clone(),
+            bn_var: weights
+                .expect(weight_names::BN_VAR, &[CONV1_FILTERS])?
+                .clone(),
             reduced_weight: weights
-                .expect(weight_names::REDUCED_WEIGHT, &[1, 8, 5, 5])?
+                .expect(
+                    weight_names::REDUCED_WEIGHT,
+                    &[
+                        REDUCED_FILTERS,
+                        CONV1_FILTERS,
+                        REDUCED_KERNEL.0,
+                        REDUCED_KERNEL.1,
+                    ],
+                )?
                 .clone(),
-            reduced_bias: weights.expect(weight_names::REDUCED_BIAS, &[1])?.clone(),
+            reduced_bias: weights
+                .expect(weight_names::REDUCED_BIAS, &[REDUCED_FILTERS])?
+                .clone(),
         })
     }
 

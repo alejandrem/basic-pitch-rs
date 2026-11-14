@@ -42,10 +42,13 @@ pub const BINS_PER_OCTAVE: usize = 12 * BINS_PER_SEMITONE; // 36
 ///
 /// Se calcula como `min(ceil(12*log2(n_harmonics)) + 88, MAX_N_SEMITONES)`
 /// con `n_harmonics = 8` y `MAX_N_SEMITONES = 103`.
-pub const N_SEMITONES: usize = 103;
+///
+/// No confundir con las 88 teclas del modelo (`ANNOTATIONS_N_SEMITONES`): la
+/// CQT cubre mas recorrido porque tiene que llegar a los armonicos altos.
+pub const CQT_N_SEMITONES: usize = 103;
 
 /// Bins de frecuencia que produce la CQT.
-pub const N_BINS: usize = N_SEMITONES * BINS_PER_SEMITONE; // 309
+pub const N_BINS: usize = CQT_N_SEMITONES * BINS_PER_SEMITONE; // 309
 
 /// Bins por semitono del modelo.
 pub const CONTOURS_BINS_PER_SEMITONE: usize = BINS_PER_SEMITONE;
