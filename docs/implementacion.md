@@ -54,18 +54,22 @@ ONNX oficial.
 | 7 | Contornos: `CONTOUR_KERNEL_SIZE_1` (32 filtros) omitida vs `CONTOUR_KERNEL_SIZE_3` (1 filtro) activa | [fase-04](teoria/primer%20paso/fase-04-implementación.md), [fase-10](práctica/fase-10-arquitectura-neuronal.md) |
 | 8 | Manifiesto de trazabilidad TF <-> ONNX <-> Rust | [fase-04](teoria/primer%20paso/fase-04-implementación.md), [fase-05](teoria/primer%20paso/fase-05-conversión-pesos.md) |
 | 9 | Directorio canónico único `models/basic-pitch/icassp-2022/` + `reference/` | [fase-05](teoria/primer%20paso/fase-05-conversión-pesos.md), [fase-06](teoria/primer%20paso/fase-06-entorno-rust.md) |
+| 10 | La normalización final de la CQT solo admite `batch == 1` en TensorFlow; en Rust (NCHW) vale para cualquier batch | [fase-08](práctica/fase-08-frontend-cqt.md), [bugs-resueltos](bugs-resueltos.md) |
+| 11 | El relleno de la CQT es **reflectante** (no repite el borde) y el submuestreo usa relleno de ceros manual de 127 muestras | [fase-08](práctica/fase-08-frontend-cqt.md), [bugs-resueltos](bugs-resueltos.md) |
+| 12 | El `NormalizedLog` amplifica el ruido del CQT ~2819 veces en los bins silenciosos: el error grande está explicado, no es un bug | [fase-08](práctica/fase-08-frontend-cqt.md), [bugs-resueltos](bugs-resueltos.md) |
 
 
 ---
-Aquí tienes la información organizada en una tabla:
 
-| Fases | Por qué juntas | Riesgo |
-| --- | --- | --- |
-| **P1** (0 + 1 + 2) | Auditoría + pesos + workspace. Todo mecánico, todo con el modelo y el código ya en disco. Deja listo el oráculo de referencia. | Bajo |
-| **P2** (3 + 4 + 5) | Audio → CQT → NormalizedLog → BN → HarmonicStacking. El bloque numérico difícil. Con kernels extraídos del ONNX es viable en un prompt. | Alto |
-| **P3** (6 + 7) | Red Candle + validación de equivalencia etapa por etapa. | Medio |
-| **P4** (8 + 9 + 10 + 11) | Ventanas/reconstrucción → notas → pitch bend → MIDI. Es port de numpy casi 1:1. | Bajo |
-| **P5** (12 + 13 + 14 + 15) | API + tests + CI + perf + docs. | Bajo |
+## Bloques de trabajo
+
+| Bloque | Fases | Por qué juntas | Riesgo | Estado |
+| --- | --- | --- | --- | --- |
+| **P1** (0 + 1 + 2) | Auditoría + pesos + workspace. Todo mecánico, todo con el modelo y el código ya en disco. Deja listo el oráculo de referencia. | Bajo | **Cerrado** ([estado](estado-p1.md)) |
+| **P2** (3 + 4 + 5) | Audio → CQT → NormalizedLog → BN → HarmonicStacking. El bloque numérico difícil. Con kernels extraídos del ONNX es viable en un prompt. | Alto | **Cerrado** ([estado](estado-p2.md)) |
+| **P3** (6 + 7) | Red Candle + validación de equivalencia etapa por etapa. | Medio | Pendiente |
+| **P4** (8 + 9 + 10 + 11) | Ventanas/reconstrucción → notas → pitch bend → MIDI. Es port de numpy casi 1:1. | Bajo | Pendiente |
+| **P5** (12 + 13 + 14 + 15) | API + tests + CI + perf + docs. | Bajo | Pendiente |
 
 
 # Resultado esperado

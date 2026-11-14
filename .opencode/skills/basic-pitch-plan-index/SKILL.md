@@ -60,7 +60,8 @@ fase.
         ├── 📄 fase-17-pruebas-automatizadas.md        [13] Pruebas unitarias, integración, regresión y CI.
         ├── 📄 fase-18-rendimiento.md                  [14] Benchmarks, memoria, optimización y backends.
         └── 📄 fase-19-documentacion.md              [15] Documentación técnica, procedencia de pesos, licencias y preparación para integración futura.
-```
+        |__ 📄 bugs-resueltos.md                     Resolucion de bugs conocidos en el software documentacion de oro.
+```  
   --------------------------------------------------------------------------------------------------------------
 
 ## Documentos generales

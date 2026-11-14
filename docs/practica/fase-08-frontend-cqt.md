@@ -195,3 +195,134 @@ Cada resultado se guardará con sus dimensiones, tipo de datos y métricas de er
 **Entregable de la fase:** implementación CQT y normalización funcional en Rust.
 
 **Criterio de aceptación:** la representación que sale del frontend deberá ser suficientemente equivalente a la referencia antes de conectarla con la red neuronal.
+
+## 4.6. Implementación en Rust
+
+La aritmética vive en el crate `basic-pitch-cqt`:
+
+| Fichero | Contenido |
+|---|---|
+| `transform.rs` | El cálculo de la CQT multirresolución. |
+| `normalization.rs` | `NormalizedLog`. |
+| `batch_norm.rs` | La BatchNorm inicial en modo inferencia. |
+
+`transform()` devuelve `(batch, frames, n_bins)`, es decir `(1, 172, 309)`,
+con el eje de frecuencia en **orden ascendente** (el bin 0 es la frecuencia
+más grave).
+
+Los puntos donde la implementación puede divergir de la referencia, y cómo
+se han resuelto:
+
+| Punto | Referencia | Rust |
+|---|---|---|
+| Relleno antes de la conv | `REFLECT` | `index_select` con índices reflejados |
+| Relleno del submuestreo | ceros, `(256-1)//2` | ceros, `(256-1)//2` |
+| Submuestreo | conv `VALID`, salto 2 | `conv1d` con salto 2 |
+| Parte imaginaria | `-conv(kernel_imag)` | `-conv(kernel_imag)` |
+| Normalización | `sqrt(lengths)` antes de la magnitud | idéntica |
+| Ensamblado | concatenar y conservar los últimos 309 | `narrow` sobre el eje de frecuencia |
+
+### 4.6.1. Una rareza de la referencia: el factor de normalización solo admite batch 1
+
+En TensorFlow, la normalización se aplica con la forma `(309, 1, 1)`
+sobre un tensor `(batch, 309, frames)`. TensorFlow alinea los ejes por la
+derecha, así que la operación **solo es válida con `batch == 1`**
+(para `batch > 1` exigiría `batch == 309`).
+
+En Rust la operación se hace en NCHW, con la forma `(1, 309, 1)`, que
+funciona con cualquier batch. Es un **superconjunto** del comportamiento de
+la referencia: el resultado con batch 1 es idéntico.
+
+## 4.7. Resultados de la validación
+
+La validación se hace con `cargo run --example validar_frontend -p
+basic-pitch-model`, que compara cada etapa contra los `.npy` de
+`reference/reference_outputs/` (el oráculo de la Fase 0).
+
+La **misma** entrada que vio TensorFlow: las 43.844 muestras de
+`input_audio.npy`. Así el error medido es solo del frontend, sin
+contaminar con las diferencias de decodificación y remuestreo entre
+Symphonia y soundfile.
+
+| Etapa | MAE | RMSE | Máx. absoluta | Máx. relativa |
+|---|---:|---:|---:|---:|
+| CQT | 1.76e-7 | 2.84e-7 | 5.72e-6 | 3.19e-7 |
+| NormalizedLog | 1.01e-5 | 2.99e-5 | 1.38e-3 | 1.38e-3 |
+| BatchNorm inicial | 2.51e-5 | 7.41e-5 | 3.42e-3 | 2.13e-3 |
+| Harmonic Stacking | 1.78e-5 | 5.48e-5 | 3.42e-3 | 2.13e-3 |
+
+### 4.7.1. La CQT coincide al nivel del epsilon de `float32`
+
+El error máximo de la CQT es de 5.72e-6 **absolutos** sobre valores que
+llegan a 17.96: un 3.2e-7 relativo, es decir, el epsilon de `float32`.
+
+La causa es que la convolución de la CQT acumula **256 sumandos**, y
+TensorFlow y Candle los acumulan en órdenes distintos. No es un
+algoritmo diferente: es la misma suma en orden distinto.
+
+### 4.7.2. Por qué el NormalizedLog amplifica el error (y por qué no es un bug)
+
+El error del NormalizedLog (1.4e-3) es **mucho mayor** que el de la CQT
+(5.7e-6). Es un efecto de la sensibilidad de la propia referencia, y se
+puede explicar por completo:
+
+`NormalizedLog` calcula `10 * log10(v² + 1e-10)` y divide por el rango
+`(máx - mín)` de ese valor. En los bins donde la señal es casi
+silenciosa, `v` es del orden de `5e-6`, su cuadrado (`2.6e-11`) es del
+mismo orden que el estabilizador `1e-10`, y la derivada se dispara:
+
+```text
+d(salida)/d(v) = (1/max_offset) * (10/ln10) * 2v/(v² + 1e-10)
+               = 2819          (con max_offset = 124.98)
+```
+
+El error del CQT es **absoluto** (no depende del valor del bin), así que
+en esos bins silenciosos es enorme en términos relativos:
+
+| Magnitud | Valor |
+|---|---|
+| Bin con el error máximo | frame 112, bin 80 |
+| Valor del CQT ahí | 5.12e-6 |
+| Error absoluto del CQT | 4.77e-7 (**9.3 %** relativo) |
+| Sensibilidad `d(salida)/d(v)` | 2819 |
+| Error **previsto** en la salida | 1.344e-3 |
+| Error **observado** | 1.378e-3 |
+| Cociente observado/previsto | **1.025** |
+
+El modelo analítico explica el error casi exactamente. No es ruido sin
+explicar: es la sensibilidad de la referencia ante una señal que roza el
+silencio.
+
+**Prueba adicional.** Aplicando `NormalizedLog` de Rust a la CQT **de la
+referencia**, el error cae a 1.34e-7 (MAE 7.8e-9). Eso demuestra que la
+implementación de `NormalizedLog` es correcta y que el 1.4e-3 viene
+enteramente de la amplificación del ruido de la CQT.
+
+### 4.7.3. Distribuciones del error
+
+| Métrica | NormalizedLog |
+|---|---:|
+| Mediana | 2.74e-6 |
+| Percentil 99 | 9.22e-5 |
+| Máximo | 1.38e-3 |
+| Valores con error > 1e-4 | 462 de 53.148 (0.9 %) |
+
+El error grande es una **cola**: afecta a menos del 1 % de los valores, y
+precisamente a los bins donde no hay señal.
+
+### 4.7.4. Tolerancias fijadas
+
+Las tolerancias de `crates/basic-pitch-model/tests/frontend_reference.rs`
+son cuatro veces el error medido, y su justificación es la de este
+apartado:
+
+| Etapa | Tolerancia | Motivo |
+|---|---:|---|
+| CQT | 2e-5 | ruido de `float32` en la conv de 256 sumandos |
+| NormalizedLog | 5e-3 | amplificación logarítmica en bins silenciosos |
+| BatchNorm | 1e-2 | escala la entrada ya amplificada |
+| Harmonic Stacking | 1e-2 | copia la entrada con más error acumulado |
+
+El test de BatchNorm comprueba además que el **error medio** del
+NormalizedLog se mantiene por debajo de 1e-4, que es la comprobación
+estricta: si el error grande se generalizara, ese test lo detectaría.

@@ -166,3 +166,46 @@ Se crearán pruebas para:
 **Entregable de la fase:** un módulo que produzca ventanas de audio compatibles con la entrada oficial.
 
 **Criterio de aceptación:** las muestras, dimensiones, padding y posiciones temporales coincidirán con las reglas de la referencia.
+
+## 3.6. Validación
+
+La validación de esta fase es un test de integración de punta a punta
+(`crates/audio-preprocess/tests/pipeline.rs`): escribe un archivo WAV real
+en un directorio temporal, lo decodifica y recorre la cadena completa.
+
+Lo que comprueba:
+
+| Punto | Comprobación |
+|---|---|
+| Decodificación | 2 canales, 44.100 Hz, número de frames esperado |
+| Mono | el **promedio** de los canales (0.75 × seno con un canal al doble de amplitud), no la suma ni un canal |
+| Remuestreo | a 22.050 Hz, con la amplitud conservada: el remuestreador no normaliza |
+| Ventaneo | `ceil((len + 3840) / 36164)` ventanas de 43.844 muestras |
+| Relleno inicial | la ventana 0 empieza **antes** del audio original (3.840 ceros) |
+| Contenido | a partir del relleno, la ventana contiene el audio remuestreado |
+| Solapamiento | ventanas consecutivas desplazadas 36.164 muestras (7.680 de solapamiento real) |
+
+Hay además un test de audio ya mono a 22.050 Hz, que debe salir intacto
+del remuestreo.
+
+Este test es el que detecta que el orden mono/remuestreo se invierta: si
+se invirtiera, el promedio se calcularía sobre una señal ya remuestreada
+y el resultado sería distinto.
+
+### 3.6.1. Lo que esta fase NO puede validar
+
+El audio de la referencia (`input_audio.npy`) son 43.844 muestras **ya
+decodificadas, ya en mono y ya remuestreadas**. Por tanto, la
+comparación contra el oráculo del frontend no cubre la decodificación ni
+el remuestreo: cubre la ventana.
+
+La diferencia entre el decodificador de Rust (Symphonia) y el de la
+referencia (`soundfile`/`libsndfile`) queda fuera de alcance de esta
+fase y se medirá en la Fase 7, cuando exista el MIDI final que
+comparar. Lo que sí se ha fijado:
+
+- el motor de remuestreo es el mismo (`soxr` en modo `HQ` = `soxr_hq` de
+  librosa 0.10.2), con un solo hilo y un cerrojo global, de modo que el
+  resultado es **reproducible**;
+- la conversión a mono es el promedio, con la misma precisión que NumPy
+  (`float32` de entrada, promedio en `f64`, redondeo a `float32`).

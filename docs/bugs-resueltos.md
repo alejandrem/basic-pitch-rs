@@ -403,15 +403,201 @@ Cosas que no llegan a ser bugs del modelo, pero habrian costado tiempo:
 
 ---
 
-## Resumen
+---
 
-| Categoria | Cantidad | De ellos silenciosos |
-|---|---:|---:|
-| Errores del plan (documentales) | 7 | 6 |
-| Bugs del codigo | 12 | 4 |
-| Diferencias de API entre versiones | 1 (8 casos) | - |
+# Parte 2: P2 (Fases 3, 4 y 5)
 
-**Los 10 silenciosos** (el programa no falla, devuelve numeros
-plausibles) son los que justifican la Fase 7: comparar etapa a etapa
-contra `reference/reference_outputs/`, en lugar de solo comparar el MIDI
-final, que oculta donde se ha acumulado el error.
+El bloque del frontend acustico. Aqui los errores no estan en el codigo
+(que no existia) sino en las **trampas de la referencia**, y en un
+fenomeno que parece un bug y no lo es.
+
+## B-20. El factor de normalizacion de la CQT solo admite batch 1
+
+**Sintoma.** Ninguno: es una limitacion de la referencia que se
+descubre al implementarla.
+
+**Causa.** En `nnaudio.py`, la normalizacion final es:
+
+```python
+CQT *= tf.math.sqrt(tf.cast(self.lengths.reshape((-1, 1, 1)), self.dtype))
+```
+
+`CQT` tiene forma `(batch, 309, frames)` y `lengths` tiene forma
+`(309, 1, 1)`. TensorFlow alinea los ejes **por la derecha**, asi que
+`(309, 1, 1)` se interpreta como `(1, 309, 1)` frente a
+`(batch, 309, frames)`, y la operacion **solo es valida con
+`batch == 1`**. Para `batch == 2`, haria falta `batch == 309`.
+
+**Solucion.** En Rust la operacion se hace en NCHW, con la forma
+`(1, 309, 1)`, que es valida para cualquier batch. Es un superconjunto
+del comportamiento de la referencia: con batch 1 el resultado es
+identico.
+
+**Por que importa.** Si alguien implementase la CQT en NHWC sin
+caerse en esto, el motor solo funcionaria con un audio a la vez, y
+fallaria de forma confusa al Procesar un lote.
+
+## B-21. El relleno de la CQT es reflectante, no de ceros
+
+**Sintoma.** Un CQT con la forma correcta pero con los valores
+erroneos: la diferencia aparece en los **bordes** de cada frame, donde
+el relleno pesa mas.
+
+**Causa.** `CQT2010v2` usa `pad_mode="reflect"`, que en TensorFlow es
+`tf.pad(..., "REFLECT")`: el reflejo **no repite el valor del borde**
+(`[a b c] -> [b a b c b]`), a diferencia del modo `symmetric`.
+
+**Trampa asociada.** Candle no tiene padding reflectante. Se
+implementa con `index_select` sobre un vector de indices reflejados, y
+el modo `REFLECT` de TensorFlow exige que el relleno sea **menor** que
+la dimension de la senal. En la ultima octava eso significa que la
+senal tiene 171 muestras y el relleno 128: justo por debajo del limite.
+
+**Verificacion.** Test unitario del relleno y, sobre todo, la
+comparacion con la referencia: la CQT coincide con una diferencia
+maxima de 5.7e-6 absolutos, que es el epsilon de `float32`.
+
+## B-22. El submuestreo usa relleno de ceros manual, no `SAME`
+
+**Sintoma.** El numero de frames de la CQT no cuadra: 171 en lugar de
+172, o un desplazamiento de una muestra en las octavas inferiores.
+
+**Causa.** `downsampling_by_n` con `match_torch_exactly=True` hace el
+relleno a mano:
+
+```python
+paddings = [[0, 0], [0, 0], [(filter_kernel.shape[-1] - 1) // 2, (filter_kernel.shape[-1] - 1) // 2]]
+```
+
+Es decir, **127 ceros a cada lado**, no el `SAME` de TensorFlow. La
+diferencia es de una muestra, y se propaga a todos los frames de las
+octavas inferiores.
+
+**Verificacion.** El numero de frames es 172 en las nueve octavas, y
+las longitudes de la senal submuestreada son exactamente
+43844 -> 21922 -> 10961 -> 5480 -> 2740 -> 1370 -> 685 -> 342 -> 171.
+
+## B-23. La normalizacion por `sqrt(lengths)` va ANTES de la magnitud
+
+**Sintoma.** Un factor `sqrt(309)` de diferencia en toda la CQT: un
+error que parece de pesos y no lo es.
+
+**Causa.** En la referencia, la secuencia es:
+
+```python
+CQT = CQT * self.downsample_factor   # 1.0
+CQT *= tf.math.sqrt(...)             # por bin de frecuencia
+return tf.transpose(tf.math.sqrt(tf.math.reduce_sum(tf.math.pow(CQT, 2), axis=-1)), [0, 2, 1])
+```
+
+El factor por bin se aplica a la parte real **y** a la imaginaria
+**antes** de tomar la magnitud. Aplicarlo despues (a la magnitud ya
+calculada) es matematicamente equivalente, pero no numericamente igual,
+y con `float32` se nota.
+
+**Ademas**, `CQT_imag` es el **negativo** de la convolucion con el
+kernel imaginario: `CQT_imag = -tf.nn.conv1d(...)`. Olvidar el signo
+cambia la magnitud, no solo la fase.
+
+## B-24. El error del CQT se amplifica ~2800 veces en el logaritmo
+
+**Sintoma.** La CQT de Rust coincide con la de TensorFlow al nivel de
+`float32` (5.7e-6), pero el NormalizedLog difiere en 1.4e-3. Parece un
+bug en el logaritmo.
+
+**Causa.** No es un bug. `NormalizedLog` calcula `10*log10(v² + 1e-10)`
+y divide por el rango. En los bins silenciosos, `v ≈ 5e-6`, su cuadrado
+es del mismo orden que el estabilizador `1e-10`, y la derivada respecto
+de `v` vale **2819**.
+
+El error del CQT es **absoluto** (no depende del valor del bin), asi que
+en esos bins es un 9.3 % de error relativo, y el logaritmo lo convierte
+en 1.4e-3 absoluto en la salida.
+
+**Verificacion.** Modelo analitico: error previsto 1.344e-3, observado
+1.378e-3, cociente 1.025. Y la prueba de que el logaritmo esta bien:
+aplicandolo a la CQT **de la referencia**, el error cae a 1.3e-7.
+
+**Por que importa.** Sin este analisis, el siguiente paso habria sido
+"arreglar" el NormalizedLog, y se habria roto. El detalle esta en
+[fase-08-frontend-cqt.md](practica/fase-08-frontend-cqt.md), apartado
+4.7.2.
+
+## B-25. El lector de `.npy` tropezo con la tupla de la forma
+
+**Sintoma.** `InvalidHeader("forma invalida '(1, 172, 309)': invalid
+digit found in string")` al leer un `.npy` perfectamente valido.
+
+**Causa.** El extractor generico de campos de la cabecera corta en la
+primera coma, y la forma **es** una tupla con comas: `(1, 172, 309)`
+devolvia `(1`.
+
+**Solucion.** Un extractor especifico para la forma, que busca el
+parentesis que cierra. Y un segundo fallo en el mismo sitio: la forma
+`(43844,)` tiene un elemento vacio despues de la coma, que hay que
+filtrar.
+
+**Reflexion.** Es el mismo tipo de error que B-09 (emparejar tensores
+por forma en lugar de por contenido): los formatos de fichero tienen
+casos limite que hay que tratar explicitamente.
+
+## B-26. `ModelConfig` no tenia un constructor por defecto
+
+**Sintoma.** `no associated function or constant named 'default' found
+for struct 'config::ModelConfig'`.
+
+**Causa.** La configuracion de ejemplo vivia como helper privado del
+modulo de tests de `config.rs`, y hacia falta en los tests de
+`frontend.rs`.
+
+**Solucion.** Se sube a `ModelConfig::example()`, con los mismos valores
+que el asset `model_config.json`. Los tests de los demas modulos ya no
+dependen del sistema de archivos.
+
+## B-27. Los enums de error se habian inflado hasta pasar de 128 bytes
+
+**Sintoma.** Aviso de clippy `result_large_err` en el crate de
+transcripcion, que aparecio justo despues de anadir el frontend.
+
+**Causa.** `candle_core::Error` es grande (contiene `Shape` y `String`),
+y al encadenar `ModelError -> FrontendError -> TransformError ->
+candle_core::Error`, cada enum arrastraba el tamaño del anterior.
+
+**Solucion.** Encuadrar (`Box`) las variantes grandes: `candle_core::Error`,
+`WeightsError`, `KernelsError`, `FrontendError` y `ModelError`. Cada
+`Result` que devuelve uno de esos enums copia ahora 8 bytes en lugar de
+128.
+
+**Nota.** No es un bug funcional: el lint avisa de rendimiento en la
+ruta de error, que es fria. Pero el coste de arreglarlo es bajo y el
+codigo queda mejor.
+
+---
+
+# Resumen
+
+| Bloque | Categoria | Cantidad | De ellos silenciosos |
+|---|---|---:|---:|
+| P1 | Errores del plan (documentales) | 7 | 6 |
+| P1 | Bugs del codigo | 12 | 4 |
+| P1 | Diferencias de API entre versiones | 1 (8 casos) | - |
+| P2 | Trampas de la referencia (documentales) | 4 | 3 |
+| P2 | Bugs del codigo | 4 | 1 |
+| **Total** | | **28** | **14** |
+
+**Los 14 silenciosos** (el programa no falla, devuelve numeros
+plausibles) son los que justifican la validacion etapa a etapa contra
+`reference/reference_outputs/`, en lugar de comparar solo el MIDI final,
+que oculta donde se ha acumulado el error.
+
+Los tres silenciosos de P2 que mas costan adivinar son:
+
+- **B-20**: el factor de normalizacion de la CQT solo admite `batch == 1`
+  en TensorFlow. El port lo hace valido para cualquier batch, pero si
+  alguien "corrige" el port para que sea igual que la referencia en
+  NHWC, rompe el procesamiento por lotes.
+- **B-22**: el submuestreo usa relleno de ceros manual de 127 muestras,
+  no `SAME`. La diferencia es de una muestra y desplaza todas las
+  octavas inferiores.
+- **B-24**: el error del CQT se amplifica 2819 veces en el logaritmo.
+  Sin el analisis, el "arreglo" habria sido romper el NormalizedLog.
