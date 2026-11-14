@@ -30,6 +30,48 @@ use basic_pitch_model::{config::ModelConfig, weights::Weights, AcousticFrontend}
 use basic_pitch_reference_npy::{read_f32, write_f32};
 use candle_core::Tensor;
 
+/// Informe de la validacion, guardado en `reference/validation_results.json`.
+///
+/// La fase 4 pide que "cada resultado se guarde con sus dimensiones, tipo
+/// de datos y metricas de error". Imprimir por pantalla no es guardar.
+fn guardar_informe(
+    ruta: &Path,
+    etapas: &[(&str, &[usize], &[usize], Metrics)],
+) -> std::io::Result<()> {
+    let mut json = String::new();
+    json.push_str("{\n");
+    json.push_str("  \"descripcion\": \"Validacion etapa a etapa del frontend acustico de Rust contra TensorFlow.\",\n");
+    json.push_str(
+        "  \"generado_por\": \"cargo run --example validar_frontend -p basic-pitch-model\",\n",
+    );
+    json.push_str("  \"origen_referencia\": \"reference/reference_outputs/ (SavedModel oficial, commit fa5997af)\",\n");
+    json.push_str("  \"etapas\": {\n");
+
+    for (indice, (nombre, forma_rust, forma_ref, metricas)) in etapas.iter().enumerate() {
+        let coma = if indice + 1 == etapas.len() { "" } else { "," };
+        json.push_str(&format!(
+            "    \"{nombre}\": {{\n      \"shape_rust\": {forma_rust:?},\n      \"shape_referencia\": {forma_ref:?},\n      \"dtype\": \"float32\",\n      \"mae\": {:.6e},\n      \"rmse\": {:.6e},\n      \"max_abs_diff\": {:.6e},\n      \"max_rel_diff\": {:.6e},\n      \"tolerancia\": \"{tolerancia}\"\n    }}{coma}\n",
+            metricas.mae,
+            metricas.rmse,
+            metricas.max_abs,
+            metricas.max_rel(),
+            tolerancia = tolerancia_de(nombre),
+        ));
+    }
+
+    json.push_str("  }\n}\n");
+    std::fs::write(ruta, json)
+}
+
+/// La tolerancia con la que se valida cada etapa.
+fn tolerancia_de(nombre: &str) -> &'static str {
+    match nombre {
+        "CQT" => "2e-5",
+        "NormalizedLog" => "5e-3",
+        _ => "1e-2",
+    }
+}
+
 /// Raiz del repositorio.
 fn repo_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
@@ -172,19 +214,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!();
 
     let cqt_ref = read_f32(&reference_dir.join("cqt.npy"))?;
-    print_stage(
-        "CQT",
-        stages.cqt.dims(),
-        &cqt_ref.shape,
-        compare(&flat(&stages.cqt), &cqt_ref.data),
-    );
+    let cqt_metrics = compare(&flat(&stages.cqt), &cqt_ref.data);
+    print_stage("CQT", stages.cqt.dims(), &cqt_ref.shape, cqt_metrics);
 
     let log_ref = read_f32(&reference_dir.join("normalized_log.npy"))?;
+    let log_metrics = compare(&flat(&stages.normalized_log), &log_ref.data);
     print_stage(
         "NormalizedLog",
         stages.normalized_log.dims(),
         &log_ref.shape,
-        compare(&flat(&stages.normalized_log), &log_ref.data),
+        log_metrics,
     );
 
     // Diagnostico: NormalizedLog aplicada a la CQT **de la referencia**.
@@ -201,24 +240,62 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     let bn_ref = read_f32(&reference_dir.join("batch_norm_input.npy"))?;
+    let bn_metrics = compare(&flat(&stages.batch_norm), &bn_ref.data);
     print_stage(
         "BatchNorm inicial",
         stages.batch_norm.dims(),
         &bn_ref.shape,
-        compare(&flat(&stages.batch_norm), &bn_ref.data),
+        bn_metrics,
     );
 
     // La referencia guarda el Harmonic Stacking en NHWC (batch, 172, 264, 8);
     // Rust lo mantiene en NCHW (batch, 8, 172, 264).
     let harmonic_nhwc = stages.harmonic_stacking.permute((0, 2, 3, 1))?;
     let harmonic_ref = read_f32(&reference_dir.join("harmonic_stacking.npy"))?;
+    let harmonic_metrics = compare(&flat(&harmonic_nhwc), &harmonic_ref.data);
     print_stage(
         "HarmonicStacking",
         stages.harmonic_stacking.dims(),
         &harmonic_ref.shape,
-        compare(&flat(&harmonic_nhwc), &harmonic_ref.data),
+        harmonic_metrics,
     );
 
+    println!();
+
+    // --- Informe persistido ---
+    //
+    // La fase 4 exige que cada resultado se guarde con sus dimensiones,
+    // su tipo de datos y sus metricas de error.
+    let informe = reference_dir
+        .parent()
+        .unwrap()
+        .join("validation_results.json");
+    guardar_informe(
+        &informe,
+        &[
+            ("CQT", stages.cqt.dims(), &cqt_ref.shape, cqt_metrics),
+            (
+                "NormalizedLog",
+                stages.normalized_log.dims(),
+                &log_ref.shape,
+                log_metrics,
+            ),
+            (
+                "BatchNorm inicial",
+                stages.batch_norm.dims(),
+                &bn_ref.shape,
+                bn_metrics,
+            ),
+            (
+                "HarmonicStacking",
+                stages.harmonic_stacking.dims(),
+                &harmonic_ref.shape,
+                harmonic_metrics,
+            ),
+        ],
+    )
+    .ok();
+    println!("Informe guardado en {}", informe.display());
     println!();
 
     // --- Volcado opcional ---

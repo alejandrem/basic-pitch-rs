@@ -1,0 +1,47 @@
+{
+  "descripcion": "Validacion etapa a etapa del frontend acustico de Rust contra TensorFlow.",
+  "generado_por": "cargo run --example validar_frontend -p basic-pitch-model",
+  "origen_referencia": "reference/reference_outputs/ (SavedModel oficial, commit fa5997af)",
+  "etapas": {
+    "CQT": {
+      "shape_rust": [1, 172, 309],
+      "shape_referencia": [1, 172, 309],
+      "dtype": "float32",
+      "mae": 1.762387e-7,
+      "rmse": 2.834531e-7,
+      "max_abs_diff": 5.722046e-6,
+      "max_rel_diff": 3.186061e-7,
+      "tolerancia": "2e-5"
+    },
+    "NormalizedLog": {
+      "shape_rust": [1, 172, 309],
+      "shape_referencia": [1, 172, 309],
+      "dtype": "float32",
+      "mae": 1.009912e-5,
+      "rmse": 2.986816e-5,
+      "max_abs_diff": 1.378096e-3,
+      "max_rel_diff": 1.378096e-3,
+      "tolerancia": "5e-3"
+    },
+    "BatchNorm inicial": {
+      "shape_rust": [1, 172, 309],
+      "shape_referencia": [1, 172, 309, 1],
+      "dtype": "float32",
+      "mae": 2.505326e-5,
+      "rmse": 7.409508e-5,
+      "max_abs_diff": 3.418684e-3,
+      "max_rel_diff": 2.131585e-3,
+      "tolerancia": "1e-2"
+    },
+    "HarmonicStacking": {
+      "shape_rust": [1, 8, 172, 264],
+      "shape_referencia": [1, 172, 264, 8],
+      "dtype": "float32",
+      "mae": 1.782231e-5,
+      "rmse": 5.478582e-5,
+      "max_abs_diff": 3.418684e-3,
+      "max_rel_diff": 2.131585e-3,
+      "tolerancia": "1e-2"
+    }
+  }
+}
