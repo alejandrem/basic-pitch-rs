@@ -126,11 +126,15 @@ impl Default for CqtConfig {
     }
 }
 
+pub mod batch_norm;
 pub mod kernels;
 pub mod normalization;
+pub mod transform;
 
+pub use batch_norm::{BatchNormError, BatchNormParams};
 pub use kernels::{CqtKernels, KernelsError};
 pub use normalization::{normalized_log, NormalizedLogError};
+pub use transform::{transform, TransformError};
 
 /// Error del frontend CQT.
 #[derive(Debug, thiserror::Error)]
@@ -142,4 +146,12 @@ pub enum CqtError {
     /// Error en la normalizacion logaritmica.
     #[error("error en NormalizedLog: {0}")]
     Normalization(#[from] NormalizedLogError),
+
+    /// Error en el calculo de la CQT.
+    #[error("error en el calculo de la CQT: {0}")]
+    Transform(#[from] TransformError),
+
+    /// Error en la BatchNorm inicial.
+    #[error("error en la BatchNorm inicial: {0}")]
+    BatchNorm(#[from] BatchNormError),
 }
