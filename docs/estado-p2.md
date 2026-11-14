@@ -68,6 +68,25 @@ Análisis completo en
 [`docs/practica/fase-08-frontend-cqt.md`](practica/fase-08-frontend-cqt.md),
 apartado 4.7.
 
+### Con audio real, de extremo a extremo
+
+Además del oráculo sintético, se ha generado un oráculo con **audio
+real** del upstream (`reference/audio_reference/`), que permite validar
+también la decodificación y el remuestreo:
+
+| Comprobación | MAE | Máx. |
+|---|---:|---:|
+| Decodificación + mono + remuestreo vs. `soundfile`+`soxr_hq` | 2.7e-8 | 3.0e-7 |
+| Cadena completa, ventana 0 de `vocadito_10` (CQT) | 1.1e-7 | 2.4e-6 |
+| Cadena completa, ventana 0 de `vocadito_10` (Harmonic Stacking) | 3.0e-6 | 9.7e-4 |
+| Cadena completa, ventana 1 de `vocadito_10` (Harmonic Stacking) | 9.2e-6 | 1.5e-3 |
+| Cadena completa, ventana 0 de `vocadito_14` (Harmonic Stacking) | 1.3e-6 | 2.8e-4 |
+
+**Symphonia y soundfile producen la misma señal**: la diferencia está
+por debajo del epsilon de `float32`. La incógnita que la Fase 3
+declaraba abierta (apartado 3.3.1 del plan) queda resuelta.
+
+
 ---
 
 ## Reproducirlo

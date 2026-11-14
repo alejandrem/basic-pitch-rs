@@ -57,6 +57,7 @@ ONNX oficial.
 | 10 | La normalización final de la CQT solo admite `batch == 1` en TensorFlow; en Rust (NCHW) vale para cualquier batch | [fase-08](práctica/fase-08-frontend-cqt.md), [bugs-resueltos](bugs-resueltos.md) |
 | 11 | El relleno de la CQT es **reflectante** (no repite el borde) y el submuestreo usa relleno de ceros manual de 127 muestras | [fase-08](práctica/fase-08-frontend-cqt.md), [bugs-resueltos](bugs-resueltos.md) |
 | 12 | El `NormalizedLog` amplifica el ruido del CQT ~2819 veces en los bins silenciosos: el error grande está explicado, no es un bug | [fase-08](práctica/fase-08-frontend-cqt.md), [bugs-resueltos](bugs-resueltos.md) |
+| 13 | **Symphonia y `soundfile` producen la misma señal** (diferencia < epsilon de `float32`): la incertidumbre declarada en la corrección 5 queda resuelta con medición | [fase-07](práctica/fase-07-procesamiento-audio.md), [bugs-resueltos](bugs-resueltos.md) |
 
 
 ---

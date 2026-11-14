@@ -78,11 +78,16 @@ referencia usa **`soxr_hq`**. `rubato` no es bit-idéntico a `soxr_hq`: produce
 un audio ligeramente distinto, lo que desplaza el CQT y, por tanto, las notas
 detectadas. Se descarta `rubato` para el remuestreo de producción.
 
-**Aviso importante:** usar `soxr` en Rust garantiza el mismo *algoritmo* de
-remuestreo, pero **no** garantiza igualdad muestra a muestra, porque el
-decodificador de audio puede diferir (librosa usa `soundfile` / `libsndfile`;
-Rust usará `symphonia`). La diferencia se medirá en la Fase 7 y se documentará
-como tolerancia asumida, no como error.
+**Aviso importante (medido en P2):** usar `soxr` en Rust garantiza el mismo
+*algoritmo* de remuestreo, pero **no** garantiza igualdad muestra a muestra,
+porque el decodificador de audio puede diferir (librosa usa `soundfile` /
+`libsndfile`; Rust usa `symphonia`).
+
+Esta incertidumbre **se ha medido** en la Fase 3 (P2) con audio real del
+upstream, y el resultado es que **la diferencia está por debajo del epsilon
+de `float32`**: Symphonia y `soundfile` producen la misma señal. Ver el
+apartado 3.6.2. La diferencia que queda no procede de una decisión de
+diseño, sino del redondeo de coma flotante.
 
 En consecuencia, el plan de validación debe comparar:
 
@@ -199,13 +204,84 @@ decodificadas, ya en mono y ya remuestreadas**. Por tanto, la
 comparación contra el oráculo del frontend no cubre la decodificación ni
 el remuestreo: cubre la ventana.
 
-La diferencia entre el decodificador de Rust (Symphonia) y el de la
-referencia (`soundfile`/`libsndfile`) queda fuera de alcance de esta
-fase y se medirá en la Fase 7, cuando exista el MIDI final que
-comparar. Lo que sí se ha fijado:
+Para cerrar ese hueco se ha generado un segundo oráculo, con **audio
+real**: `reference/audio_reference/`.
 
-- el motor de remuestreo es el mismo (`soxr` en modo `HQ` = `soxr_hq` de
-  librosa 0.10.2), con un solo hilo y un cerrojo global, de modo que el
-  resultado es **reproducible**;
-- la conversión a mono es el promedio, con la misma precisión que NumPy
-  (`float32` de entrada, promedio en `f64`, redondeo a `float32`).
+| Artefacto | Contenido |
+|---|---|
+| `vocadito_10_mono22050.npy` | La señal mono a 22.050 Hz de `vocadito_10.wav`, tal y como la produce la referencia |
+| `vocadito_14_mono22050.npy` | Lo mismo para `vocadito_14.wav` |
+| `*_v0_*.npy`, `*_v1_*.npy` | Las cuatro etapas del frontend de TensorFlow sobre las ventanas 0 y 1 |
+
+El generador es
+`tools/weight-export/reference_audio_frontend.py`, que usa el SavedModel
+oficial y el **ventaneo literal** de `basic_pitch/inference.py`
+(`get_audio_input`: relleno inicial de 3.840 ceros y ventanas de 43.844
+con salto 36.164).
+
+### 3.6.2. Resultado: Symphonia y soundfile son equivalentes
+
+El oráculo permite medir, por fin, la diferencia entre el decodificador
+de Rust (**Symphonia**) y el de la referencia (**soundfile**/libsndfile),
+que era la incógnita declarada en el apartado 3.3.1.
+
+| Archivo | MAE | Diferencia máxima | RMS de la señal |
+|---|---:|---:|---:|
+| `vocadito_10` | 2.71e-8 | 2.98e-7 | 0.148 |
+| `vocadito_14` | 9.56e-9 | 1.57e-7 | 0.061 |
+
+La diferencia está **por debajo del epsilon de `float32`** (1.2e-7
+relativo). Es decir: **Symphonia y soundfile producen la misma señal**, y
+el remuestreador es el mismo (`soxr` en modo HQ). La incertidumbre que
+dejaba abierta la Fase 3 queda resuelta: no hay una diferencia
+estructural entre los decodificadores, solo redondeo de `float32`.
+
+Esto **no** es una garantía de que el MIDI final sea idéntico: la
+diferencia de 3e-7 se propaga y se amplifica en el logaritmo (ver
+[fase-08-frontend-cqt.md](fase-08-frontend-cqt.md), apartado 4.7.2). Lo
+que sí queda garantizado es que el error no viene de una decisión de
+diseño (decodificador distinto, remuestreador distinto, orden
+mono/remuestreo invertido), sino del redondeo de coma flotante.
+
+### 3.6.3. El cadena completa, de extremo a extremo
+
+`crates/basic-pitch-model/tests/audio_end_to_end.rs` recorre **todo** el
+camino, desde el archivo `.wav` hasta la entrada de la red, y lo compara
+contra TensorFlow etapa a etapa:
+
+```text
+archivo .wav
+  -> decodificacion      (Symphonia)       }
+  -> mono por promedio   }                 } contra el oraculo de
+  -> remuestreo a 22050  (soxr HQ)          } TensorFlow
+  -> ventana de 43844    (relleno de 3840) }
+  -> CQT -> NormalizedLog -> BatchNorm -> Harmonic Stacking
+```
+
+Resultados (ventanas 0 y 1 de `vocadito_10`, ventana 0 de
+`vocadito_14`):
+
+| Audio / ventana | CQT (max) | NormalizedLog (max) | BatchNorm (max) | Harmonic Stacking (max) |
+|---|---:|---:|---:|---:|
+| `vocadito_10` v0 | 2.38e-6 | 3.90e-4 | 9.68e-4 | 9.68e-4 |
+| `vocadito_10` v1 | 3.34e-6 | 6.10e-4 | 1.51e-3 | 1.51e-3 |
+| `vocadito_14` v0 | 9.54e-7 | 1.14e-4 | 2.83e-4 | 2.83e-4 |
+
+El error es **menor** que con la señal sintética del oráculo original
+(5.7e-6 en la CQT), porque el audio real tiene más energía y menos bins
+en el silencio absoluto, que es donde el logaritmo amplifica.
+
+### 3.6.4. El ventaneo, comparado con el upstream
+
+El ventaneo de Rust se contrastó con el de `basic_pitch/inference.py`:
+
+```python
+for i in range(0, audio_original.shape[0], hop_size):
+    window = audio_original[i : i + AUDIO_N_SAMPLES]
+    if len(window) < AUDIO_N_SAMPLES:
+        window = np.pad(window, pad_width=[[0, AUDIO_N_SAMPLES - len(window)]])
+```
+
+Coinciden los tres puntos: el desplazamiento entre ventanas, el relleno
+final con ceros y el número de ventanas (`ceil((len + 3840) / 36164)`).
+

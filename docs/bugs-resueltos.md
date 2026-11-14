@@ -1,7 +1,9 @@
-# Bugs resueltos en P1 (Fases 0, 1 y 2)
+# Bugs resueltos
 
-Registro de todos los errores encontrados y corregidos durante el primer
-bloque de trabajo, con el sintoma observable, la causa raiz y como se
+Registro de todos los errores encontrados y corregidos, en los
+bloques P1 (Fases 0, 1 y 2) y P2 (Fases 3, 4 y 5).
+
+Cada entrada tiene el sintoma observable, la causa raiz y como se
 verifico la correccion.
 
 Esta lista existe para dos cosas:
@@ -11,9 +13,9 @@ Esta lista existe para dos cosas:
    el programa no falla, devuelve numeros plausibles y el error aparece
    tres fases mas tarde como "el modelo no funciona".
 
----
+## P1 (Fases 0, 1 y 2)
 
-## Parte 1: Errores del plan de implementacion
+### Parte 1: Errores del plan de implementacion
 
 Eran afirmaciones del plan que no coincidian con el codigo real de
 `basic-pitch` (commit `fa5997af`, v0.4.0).
@@ -201,7 +203,7 @@ tiene kernel `(5, 5)`, **si** es valido.
 
 ---
 
-## Parte 2: Bugs del propio codigo
+### Parte 2: Bugs del propio codigo
 
 Aparecieron al implementar las Fases 0, 1 y 2.
 
@@ -403,15 +405,13 @@ Cosas que no llegan a ser bugs del modelo, pero habrian costado tiempo:
 
 ---
 
----
-
-# Parte 2: P2 (Fases 3, 4 y 5)
+## P2 (Fases 3, 4 y 5)
 
 El bloque del frontend acustico. Aqui los errores no estan en el codigo
 (que no existia) sino en las **trampas de la referencia**, y en un
 fenomeno que parece un bug y no lo es.
 
-## B-20. El factor de normalizacion de la CQT solo admite batch 1
+### B-20. El factor de normalizacion de la CQT solo admite batch 1
 
 **Sintoma.** Ninguno: es una limitacion de la referencia que se
 descubre al implementarla.
@@ -437,7 +437,7 @@ identico.
 caerse en esto, el motor solo funcionaria con un audio a la vez, y
 fallaria de forma confusa al Procesar un lote.
 
-## B-21. El relleno de la CQT es reflectante, no de ceros
+### B-21. El relleno de la CQT es reflectante, no de ceros
 
 **Sintoma.** Un CQT con la forma correcta pero con los valores
 erroneos: la diferencia aparece en los **bordes** de cada frame, donde
@@ -457,7 +457,7 @@ senal tiene 171 muestras y el relleno 128: justo por debajo del limite.
 comparacion con la referencia: la CQT coincide con una diferencia
 maxima de 5.7e-6 absolutos, que es el epsilon de `float32`.
 
-## B-22. El submuestreo usa relleno de ceros manual, no `SAME`
+### B-22. El submuestreo usa relleno de ceros manual, no `SAME`
 
 **Sintoma.** El numero de frames de la CQT no cuadra: 171 en lugar de
 172, o un desplazamiento de una muestra en las octavas inferiores.
@@ -477,7 +477,7 @@ octavas inferiores.
 las longitudes de la senal submuestreada son exactamente
 43844 -> 21922 -> 10961 -> 5480 -> 2740 -> 1370 -> 685 -> 342 -> 171.
 
-## B-23. La normalizacion por `sqrt(lengths)` va ANTES de la magnitud
+### B-23. La normalizacion por `sqrt(lengths)` va ANTES de la magnitud
 
 **Sintoma.** Un factor `sqrt(309)` de diferencia en toda la CQT: un
 error que parece de pesos y no lo es.
@@ -499,7 +499,7 @@ y con `float32` se nota.
 kernel imaginario: `CQT_imag = -tf.nn.conv1d(...)`. Olvidar el signo
 cambia la magnitud, no solo la fase.
 
-## B-24. El error del CQT se amplifica ~2800 veces en el logaritmo
+### B-24. El error del CQT se amplifica ~2800 veces en el logaritmo
 
 **Sintoma.** La CQT de Rust coincide con la de TensorFlow al nivel de
 `float32` (5.7e-6), pero el NormalizedLog difiere en 1.4e-3. Parece un
@@ -523,7 +523,7 @@ aplicandolo a la CQT **de la referencia**, el error cae a 1.3e-7.
 [fase-08-frontend-cqt.md](practica/fase-08-frontend-cqt.md), apartado
 4.7.2.
 
-## B-25. El lector de `.npy` tropezo con la tupla de la forma
+### B-25. El lector de `.npy` tropezo con la tupla de la forma
 
 **Sintoma.** `InvalidHeader("forma invalida '(1, 172, 309)': invalid
 digit found in string")` al leer un `.npy` perfectamente valido.
@@ -541,7 +541,7 @@ filtrar.
 por forma en lugar de por contenido): los formatos de fichero tienen
 casos limite que hay que tratar explicitamente.
 
-## B-26. `ModelConfig` no tenia un constructor por defecto
+### B-26. `ModelConfig` no tenia un constructor por defecto
 
 **Sintoma.** `no associated function or constant named 'default' found
 for struct 'config::ModelConfig'`.
@@ -554,7 +554,7 @@ modulo de tests de `config.rs`, y hacia falta en los tests de
 que el asset `model_config.json`. Los tests de los demas modulos ya no
 dependen del sistema de archivos.
 
-## B-27. Los enums de error se habian inflado hasta pasar de 128 bytes
+### B-27. Los enums de error se habian inflado hasta pasar de 128 bytes
 
 **Sintoma.** Aviso de clippy `result_large_err` en el crate de
 transcripcion, que aparecio justo despues de anadir el frontend.
@@ -572,9 +572,44 @@ candle_core::Error`, cada enum arrastraba el tamaño del anterior.
 ruta de error, que es fria. Pero el coste de arreglarlo es bajo y el
 codigo queda mejor.
 
----
+### B-28. La diferencia entre Symphonia y soundfile: era una incógnita abierta
 
-# Resumen
+**Sintoma.** Ninguno: era una incertidumbre declarada. El plan (fase 3,
+apartado 3.3.1) avisaba de que usar `soxr` en Rust garantiza el mismo
+*algoritmo* de remuestreo, pero no la igualdad muestra a muestra, porque
+el decodificador puede diferir.
+
+**Causa.** El oraculo sintetico (`input_audio.npy`) viene ya decodificado
+y remuestreado, asi que no permetia medir esa diferencia.
+
+**Solucion.** Se ha generado un segundo oraculo con audio real del
+upstream (`reference/audio_reference/`), usando el SavedModel oficial y
+el ventaneo literal de `basic_pitch/inference.py`.
+
+**Resultado.** La diferencia entre Symphonia y soundfile es de **2.7e-8**
+de media y **3.0e-7** de maximo: por debajo del epsilon de `float32`.
+Es decir, los dos decodificadores producen **la misma senal**.
+
+**Consecuencia.** La incertidumbre queda resuelta: el error que queda no
+viene de una decision de diseno (decodificador distinto, remuestreador
+distinto, orden mono/remuestreo invertido), sino del redondeo de coma
+flotante. El apartado 3.3.1 del plan se actualiza con esta medida.
+
+### B-29. El parser de `.npy` duplicado fallaba con la forma
+
+**Sintoma.** `forma invalida: ParseIntError { kind: InvalidDigit }` al
+leer un `.npy` con la forma `(200607,)`.
+
+**Causa.** Se habia escrito un segundo lector de `.npy` dentro del test
+de audio, en vez de reutilizar el del crate `basic-pitch-reference-npy`.
+El error era el mismo que en B-25: el corte por comas rompia la tupla de
+la forma, y aqui el problema era el `}` final del diccionario.
+
+**Solucion.** El test usa el lector del crate compartido, y el
+duplicado desaparece. Un parser de formato de fichero es codigo que no
+debe estar duplicado.
+
+## Resumen
 
 | Bloque | Categoria | Cantidad | De ellos silenciosos |
 |---|---|---:|---:|
@@ -582,8 +617,8 @@ codigo queda mejor.
 | P1 | Bugs del codigo | 12 | 4 |
 | P1 | Diferencias de API entre versiones | 1 (8 casos) | - |
 | P2 | Trampas de la referencia (documentales) | 4 | 3 |
-| P2 | Bugs del codigo | 4 | 1 |
-| **Total** | | **28** | **14** |
+| P2 | Bugs del codigo | 6 | 1 |
+| **Total** | | **30** | **14** |
 
 **Los 14 silenciosos** (el programa no falla, devuelve numeros
 plausibles) son los que justifican la validacion etapa a etapa contra
