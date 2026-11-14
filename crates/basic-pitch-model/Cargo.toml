@@ -22,4 +22,6 @@ tracing.workspace = true
 basic-pitch-audio-io.workspace = true
 basic-pitch-audio-preprocess.workspace = true
 basic-pitch-reference-npy.workspace = true
+# Para medir las diferencias entre Rust y TensorFlow.
+basic-pitch-validation.workspace = true
 tempfile.workspace = true

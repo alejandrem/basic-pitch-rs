@@ -1,0 +1,13 @@
+[package]
+name = "basic-pitch-validation"
+description = "Metricas de comparacion entre tensores (solo desarrollo)"
+edition.workspace = true
+version.workspace = true
+rust-version.workspace = true
+license.workspace = true
+# Crate de apoyo para el desarrollo: lo usan los validadores y los tests
+# de equivalencia. No forma parte del runtime del motor.
+publish = false
+
+[dependencies]
+thiserror.workspace = true

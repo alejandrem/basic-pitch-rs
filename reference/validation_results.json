@@ -1,47 +1,239 @@
 {
-  "descripcion": "Validacion etapa a etapa del frontend acustico de Rust contra TensorFlow.",
-  "generado_por": "cargo run --example validar_frontend -p basic-pitch-model",
-  "origen_referencia": "reference/reference_outputs/ (SavedModel oficial, commit fa5997af)",
+  "descripcion": "Validacion etapa a etapa de Rust contra TensorFlow.",
   "etapas": {
-    "CQT": {
-      "shape_rust": [1, 172, 309],
-      "shape_referencia": [1, 172, 309],
+    "BatchNorm inicial": {
+      "cosine_similarity": 0.9999999782432584,
       "dtype": "float32",
-      "mae": 1.762387e-7,
-      "rmse": 2.834531e-7,
-      "max_abs_diff": 5.722046e-6,
-      "max_rel_diff": 3.186061e-7,
+      "mae": 0.00002505325968032085,
+      "max_abs_diff": 0.0034186840057373047,
+      "max_rel_diff": 0.0021315847371456776,
+      "mse": 5.490080793277354e-9,
+      "rmse": 0.0000740950794133953,
+      "shape_referencia": [
+        1,
+        172,
+        309,
+        1
+      ],
+      "shape_rust": [
+        1,
+        172,
+        309
+      ],
+      "tolerancia": "1e-2"
+    },
+    "CQT": {
+      "cosine_similarity": 0.999999999999978,
+      "dtype": "float32",
+      "mae": 1.7623871536811305e-7,
+      "max_abs_diff": 5.7220458984375e-6,
+      "max_rel_diff": 3.186061194677366e-7,
+      "mse": 8.034565875009819e-14,
+      "rmse": 2.8345309797230687e-7,
+      "shape_referencia": [
+        1,
+        172,
+        309
+      ],
+      "shape_rust": [
+        1,
+        172,
+        309
+      ],
       "tolerancia": "2e-5"
     },
-    "NormalizedLog": {
-      "shape_rust": [1, 172, 309],
-      "shape_referencia": [1, 172, 309],
+    "HarmonicStacking": {
+      "cosine_similarity": 0.9999999885462647,
       "dtype": "float32",
-      "mae": 1.009912e-5,
-      "rmse": 2.986816e-5,
-      "max_abs_diff": 1.378096e-3,
-      "max_rel_diff": 1.378096e-3,
+      "mae": 0.000017822308718851013,
+      "max_abs_diff": 0.0034186840057373047,
+      "max_rel_diff": 0.0021315847371456776,
+      "mse": 3.0014861254781523e-9,
+      "rmse": 0.00005478582047827843,
+      "shape_referencia": [
+        1,
+        172,
+        264,
+        8
+      ],
+      "shape_rust": [
+        1,
+        172,
+        264,
+        8
+      ],
+      "tolerancia": "1e-2"
+    },
+    "NormalizedLog": {
+      "cosine_similarity": 0.9999999973186652,
+      "dtype": "float32",
+      "mae": 0.000010099124016045452,
+      "max_abs_diff": 0.0013780957087874413,
+      "max_rel_diff": 0.0013780957087874413,
+      "mse": 8.921067574624323e-10,
+      "rmse": 0.000029868156244777352,
+      "shape_referencia": [
+        1,
+        172,
+        309
+      ],
+      "shape_rust": [
+        1,
+        172,
+        309
+      ],
       "tolerancia": "5e-3"
     },
-    "BatchNorm inicial": {
-      "shape_rust": [1, 172, 309],
-      "shape_referencia": [1, 172, 309, 1],
+    "contour": {
+      "cosine_similarity": 0.9999999997597668,
       "dtype": "float32",
-      "mae": 2.505326e-5,
-      "rmse": 7.409508e-5,
-      "max_abs_diff": 3.418684e-3,
-      "max_rel_diff": 2.131585e-3,
-      "tolerancia": "1e-2"
+      "mae": 1.3276661265119018e-6,
+      "max_abs_diff": 0.00004425644874572754,
+      "max_rel_diff": 0.00005379944739816091,
+      "mse": 6.088458849429142e-12,
+      "rmse": 2.467480263229909e-6,
+      "shape_referencia": [
+        1,
+        172,
+        264
+      ],
+      "shape_rust": [
+        1,
+        172,
+        264
+      ],
+      "tolerancia": "2e-4"
     },
-    "HarmonicStacking": {
-      "shape_rust": [1, 8, 172, 264],
-      "shape_referencia": [1, 172, 264, 8],
+    "contour_conv": {
+      "cosine_similarity": 0.9999999907469871,
       "dtype": "float32",
-      "mae": 1.782231e-5,
-      "rmse": 5.478582e-5,
-      "max_abs_diff": 3.418684e-3,
-      "max_rel_diff": 2.131585e-3,
-      "tolerancia": "1e-2"
+      "mae": 0.00004973806222521298,
+      "max_abs_diff": 0.0019237399101257324,
+      "max_rel_diff": 0.0004170731649323487,
+      "mse": 6.882939242199764e-9,
+      "rmse": 0.00008296348137704784,
+      "shape_referencia": [
+        1,
+        172,
+        264,
+        8
+      ],
+      "shape_rust": [
+        1,
+        172,
+        264,
+        8
+      ],
+      "tolerancia": "8e-3"
+    },
+    "contour_reduced": {
+      "cosine_similarity": 0.9999999997597668,
+      "dtype": "float32",
+      "mae": 1.3276661265119018e-6,
+      "max_abs_diff": 0.00004425644874572754,
+      "max_rel_diff": 0.00005379944739816091,
+      "mse": 6.088458849429142e-12,
+      "rmse": 2.467480263229909e-6,
+      "shape_referencia": [
+        1,
+        172,
+        264,
+        1
+      ],
+      "shape_rust": [
+        1,
+        172,
+        264,
+        1
+      ],
+      "tolerancia": "2e-4"
+    },
+    "note": {
+      "cosine_similarity": 0.9999999999547686,
+      "dtype": "float32",
+      "mae": 5.863591178023034e-7,
+      "max_abs_diff": 0.000016629695892333984,
+      "max_rel_diff": 0.000019214659007983657,
+      "mse": 1.6453844614607541e-12,
+      "rmse": 1.2827254037637026e-6,
+      "shape_referencia": [
+        1,
+        172,
+        88
+      ],
+      "shape_rust": [
+        1,
+        172,
+        88
+      ],
+      "tolerancia": "7e-5"
+    },
+    "notes_features": {
+      "cosine_similarity": 0.9999999999220559,
+      "dtype": "float32",
+      "mae": 2.062746724238113e-6,
+      "max_abs_diff": 0.00006860494613647461,
+      "max_rel_diff": 0.000057066453116165484,
+      "mse": 1.4605536001930963e-11,
+      "rmse": 3.821718985212147e-6,
+      "shape_referencia": [
+        1,
+        172,
+        88,
+        32
+      ],
+      "shape_rust": [
+        1,
+        172,
+        88,
+        32
+      ],
+      "tolerancia": "3e-4"
+    },
+    "onset": {
+      "cosine_similarity": 0.9999999990485593,
+      "dtype": "float32",
+      "mae": 2.6525880838202878e-6,
+      "max_abs_diff": 0.000053375959396362305,
+      "max_rel_diff": 0.00007935557073448078,
+      "mse": 2.007101057526676e-11,
+      "rmse": 4.480068144042763e-6,
+      "shape_referencia": [
+        1,
+        172,
+        88
+      ],
+      "shape_rust": [
+        1,
+        172,
+        88
+      ],
+      "tolerancia": "2e-4"
+    },
+    "onset_features": {
+      "cosine_similarity": 0.999999983356885,
+      "dtype": "float32",
+      "mae": 0.00003662744071680498,
+      "max_abs_diff": 0.0020423531532287598,
+      "max_rel_diff": 0.0004572645722005346,
+      "mse": 4.8296967363621824e-9,
+      "rmse": 0.00006949601957207465,
+      "shape_referencia": [
+        1,
+        172,
+        88,
+        32
+      ],
+      "shape_rust": [
+        1,
+        172,
+        88,
+        32
+      ],
+      "tolerancia": "8e-3"
     }
-  }
+  },
+  "generado_por": "cargo run --release --example validar_model -p basic-pitch-model",
+  "nota": "Las etapas del frontend las produce el crate cqt; las de la red, la traza de las ramas.",
+  "origen_referencia": "reference/reference_outputs/ (SavedModel oficial, commit fa5997af)"
 }

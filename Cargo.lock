@@ -121,6 +121,7 @@ dependencies = [
  "basic-pitch-audio-preprocess",
  "basic-pitch-cqt",
  "basic-pitch-reference-npy",
+ "basic-pitch-validation",
  "candle-core",
  "candle-nn",
  "safetensors",
@@ -149,12 +150,20 @@ dependencies = [
  "basic-pitch-midi-io",
  "basic-pitch-model",
  "basic-pitch-reference-npy",
+ "basic-pitch-validation",
  "candle-core",
  "serde",
  "serde_json",
  "tempfile",
  "thiserror 2.0.21",
  "tracing",
+]
+
+[[package]]
+name = "basic-pitch-validation"
+version = "0.1.0"
+dependencies = [
+ "thiserror 2.0.21",
 ]
 
 [[package]]
