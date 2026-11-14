@@ -4,13 +4,14 @@ use std::path::Path;
 
 use basic_pitch_audio_io::decode_file;
 use basic_pitch_audio_preprocess::{
-    resample, to_mono, AudioWindows, AUDIO_SAMPLE_RATE, HOP_SIZE, INITIAL_PADDING,
+    resample, to_mono, AudioWindows, AUDIO_N_SAMPLES, AUDIO_SAMPLE_RATE, FFT_HOP, HOP_SIZE,
+    INITIAL_PADDING,
 };
 use basic_pitch_model::BasicPitchModel;
 
-use crate::note_detection::NoteEvent;
+use crate::note_detection::{output_to_notes_polyphonic, NoteEvent, N_NOTES};
 use crate::stitching::{
-    expected_frames, ModelUnwrapper, ReconstructedOutput, N_OVERLAPPING_FRAMES,
+    expected_frames, frame_to_time, ModelUnwrapper, ReconstructedOutput, N_OVERLAPPING_FRAMES,
 };
 use crate::InferenceConfig;
 
@@ -172,15 +173,52 @@ impl Transcriber {
 
     /// Convierte las predicciones en eventos de nota.
     ///
-    /// La deteccion polifonica completa se implementa en la Fase 9; aqui se
-    /// dejan los parametros y la estructura prepared.
+    /// La deteccion polifonica es la de `output_to_notes_polyphonic` del
+    /// upstream (Fase 9).
+    ///
+    /// Las notas se detectan sobre la salida **note** y los onsets sobre la
+    /// salida **onset**: las dos tienen 88 valores por frame. El contour
+    /// (264 valores) no interviene aqui: solo se usa para el pitch bend
+    /// (Fase 10) y para saber cuantos frames hay.
     fn to_notes(
         &self,
-        _predictions: &ReconstructedOutput,
+        predictions: &ReconstructedOutput,
         _original_length: usize,
     ) -> Vec<NoteEvent> {
-        // La implementacion completa llega en la Fase 9.
-        Vec::new()
+        let n_freqs = N_NOTES;
+        let frames = predictions.note.flatten_all().expect("aplanar");
+        let onsets = predictions.onset.flatten_all().expect("aplanar");
+        let frames = frames.to_vec1::<f32>().expect("float32");
+        let onsets = onsets.to_vec1::<f32>().expect("float32");
+        let n_frames = frames.len() / n_freqs;
+
+        let notas = output_to_notes_polyphonic(
+            &frames,
+            &onsets,
+            n_frames,
+            n_freqs,
+            &self.config.note_detection,
+        );
+
+        // Los frames se convierten a tiempo con la conversion del upstream,
+        // que incluye el desplazamiento por ventana (y su inconsistencia
+        // 172/142, que hay que conservar).
+        notas
+            .into_iter()
+            .map(|nota| {
+                NoteEvent::from_amplitude(
+                    frame_to_time(
+                        nota.start_frame,
+                        AUDIO_SAMPLE_RATE,
+                        FFT_HOP,
+                        AUDIO_N_SAMPLES,
+                    ),
+                    frame_to_time(nota.end_frame, AUDIO_SAMPLE_RATE, FFT_HOP, AUDIO_N_SAMPLES),
+                    nota.pitch,
+                    nota.amplitude,
+                )
+            })
+            .collect()
     }
 }
 

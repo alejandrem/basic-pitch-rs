@@ -14,22 +14,18 @@ pub mod pitch_bend;
 pub mod stitching;
 
 pub use inference::{Transcriber, TranscriptionResult};
-pub use note_detection::{NoteDetectionConfig, NoteEvent};
+pub use note_detection::NoteDetectionConfig;
+// El tipo canonico de evento musical vive en midi-io.
+pub use basic_pitch_midi_io::NoteEvent;
 pub use pitch_bend::PitchBendEstimator;
 
 /// Configuracion de la inferencia.
 #[derive(Debug, Clone, PartialEq)]
 pub struct InferenceConfig {
-    /// Umbral de activacion de onset.
-    pub onset_threshold: f64,
-    /// Umbral de activacion de frame.
-    pub frame_threshold: f64,
-    /// Duracion minima de nota, en milisegundos.
-    pub minimum_note_length_ms: f64,
+    /// Umbrales y opciones de la deteccion de notas.
+    pub note_detection: NoteDetectionConfig,
     /// Si se permiten pitch bends simultaneos.
     pub multiple_pitch_bends: bool,
-    /// Si se aplica el truco de Melodia.
-    pub melodia_trick: bool,
     /// Tempo del MIDI de salida.
     pub midi_tempo: f64,
 }
@@ -37,11 +33,8 @@ pub struct InferenceConfig {
 impl Default for InferenceConfig {
     fn default() -> Self {
         Self {
-            onset_threshold: note_detection::DEFAULT_ONSET_THRESHOLD,
-            frame_threshold: note_detection::DEFAULT_FRAME_THRESHOLD,
-            minimum_note_length_ms: note_detection::DEFAULT_MINIMUM_NOTE_LENGTH_MS,
+            note_detection: NoteDetectionConfig::default(),
             multiple_pitch_bends: false,
-            melodia_trick: true,
             midi_tempo: 120.0,
         }
     }

@@ -8,6 +8,9 @@ license.workspace = true
 
 [dependencies]
 basic-pitch-audio-io.workspace = true
+# El tipo canonico de evento musical vive en midi-io, igual que en el
+# upstream (pretty_midi define el NoteEvent junto al escritor de MIDI).
+basic-pitch-midi-io.workspace = true
 basic-pitch-audio-preprocess.workspace = true
 basic-pitch-model.workspace = true
 candle-core.workspace = true

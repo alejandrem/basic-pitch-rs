@@ -1,0 +1,54 @@
+{
+  "descripcion": "Notas detectadas por el upstream (basic_pitch.inference.predict) sobre audio real. Oraculo de la Fase 9.",
+  "nota": "Las notas vienen del codigo del upstream sin modificar, no de una reimplementacion.",
+  "puntos": {
+    "vocadito_10": {
+      "audio": "basic-pitch/tests/resources/vocadito_10.wav",
+      "n_notas": 28,
+      "notas_npy": "vocadito_10_notes.npy",
+      "midi_upstream": "vocadito_10_upstream.mid",
+      "columnas": [
+        "start_time",
+        "end_time",
+        "pitch",
+        "amplitude"
+      ],
+      "primera": [
+        8.701008796691895,
+        8.875158309936523,
+        48.0,
+        0.5261253714561462
+      ],
+      "ultima": [
+        1.277097463607788,
+        1.4396371841430664,
+        47.0,
+        0.4428795874118805
+      ]
+    },
+    "peso_del_silencio": {
+      "audio": "/tmp/opencode/render/peso_del_silencio.wav",
+      "n_notas": 2158,
+      "notas_npy": "peso_del_silencio_notes.npy",
+      "midi_upstream": "peso_del_silencio_upstream.mid",
+      "columnas": [
+        "start_time",
+        "end_time",
+        "pitch",
+        "amplitude"
+      ],
+      "primera": [
+        177.131591796875,
+        177.445068359375,
+        29.0,
+        0.8039569854736328
+      ],
+      "ultima": [
+        9.862006187438965,
+        10.083879470825195,
+        51.0,
+        0.29393577575683594
+      ]
+    }
+  }
+}
