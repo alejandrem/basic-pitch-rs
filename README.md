@@ -179,6 +179,18 @@ sonido hasta que un sintetizador lo convierte en audio. El soundfont
 `TimGM6mb` que se usa es el mismo que trae `pretty_midi`, con el que el
 upstream de Spotify evalúa sus resultados.
 
+### Ajustar el resultado
+
+```bash
+# Sin el truco de Melodia: solo notas con onset claro, sin las armonias
+# del timbre. La diferencia es pequena: las armonias las predice la red.
+basic-pitch transcribe cancion.mp3 -o limpio.mid --no-melodia
+
+# Subiendo el umbral de activacion de nota (0.3 por defecto) se
+# eliminan las armonias mas debles, pero tambien algunas notas reales.
+basic-pitch transcribe cancion.mp3 -o limpio.mid --frame-threshold 0.4
+```
+
 ### Comprobar la fidelidad
 
 El motor se compara nota a nota con la implementación original:

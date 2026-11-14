@@ -47,6 +47,8 @@ fn main() -> ExitCode {
             let mut audio: Option<PathBuf> = None;
             let mut output: Option<PathBuf> = None;
             let mut model_dir = PathBuf::from(DEFAULT_MODEL_DIR);
+            let mut melodia_trick = true;
+            let mut frame_threshold: Option<f64> = None;
 
             while let Some(arg) = args.next() {
                 match arg.as_str() {
@@ -64,6 +66,19 @@ fn main() -> ExitCode {
                             return ExitCode::FAILURE;
                         }
                     },
+                    "--frame-threshold" => match args.next().and_then(|v| v.parse::<f64>().ok()) {
+                        Some(v) => frame_threshold = Some(v),
+                        None => {
+                            eprintln!("error: --frame-threshold necesita un numero");
+                            return ExitCode::FAILURE;
+                        }
+                    },
+                    "--no-melodia" => {
+                        // Sin el truco de Melodia solo se detectan las
+                        // notas con onset claro: menos armonias del
+                        // timbre, a costa de notas mas debiles.
+                        melodia_trick = false;
+                    }
                     "-h" | "--help" => {
                         print_help();
                         return ExitCode::SUCCESS;
@@ -85,7 +100,13 @@ fn main() -> ExitCode {
                 return ExitCode::FAILURE;
             };
 
-            match transcribe(&audio, output.as_deref(), &model_dir) {
+            match transcribe(
+                &audio,
+                output.as_deref(),
+                &model_dir,
+                melodia_trick,
+                frame_threshold,
+            ) {
                 Ok(mensaje) => {
                     println!("{mensaje}");
                     ExitCode::SUCCESS
@@ -109,9 +130,19 @@ fn main() -> ExitCode {
 }
 
 /// Transcribe un archivo de audio y escribe el MIDI.
-fn transcribe(audio: &Path, output: Option<&Path>, model_dir: &Path) -> Result<String, String> {
-    let transcriptor = basic_pitch_transcription::Transcriber::load(model_dir)
+fn transcribe(
+    audio: &Path,
+    output: Option<&Path>,
+    model_dir: &Path,
+    melodia_trick: bool,
+    frame_threshold: Option<f64>,
+) -> Result<String, String> {
+    let mut transcriptor = basic_pitch_transcription::Transcriber::load(model_dir)
         .map_err(|e| format!("no se pudo cargar el modelo: {e}"))?;
+    transcriptor.config.note_detection.melodia_trick = melodia_trick;
+    if let Some(umbral) = frame_threshold {
+        transcriptor.config.note_detection.frame_threshold = umbral;
+    }
 
     let resultado = transcriptor
         .transcribe(audio)
@@ -149,6 +180,11 @@ fn print_help() {
     println!("    transcribe <audio>      Transcribe un archivo de audio a MIDI");
     println!("        -o <salida.mid>    Ruta del MIDI de salida (por defecto, junto al audio)");
     println!("        -m <dir_modelo>    Directorio del modelo");
+    println!("        --no-melodia       Sin el truco de Melodia: solo notas con onset claro,");
+    println!("                           sin las armonias del timbre");
+    println!("        --frame-threshold N Umbral de activacion de nota (0.3 por defecto).");
+    println!("                           Subirlo elimina las armonias mas debles,");
+    println!("                           pero tambien algunas notas reales");
     println!("    help                    Muestra esta ayuda");
     println!();
     println!("El directorio del modelo por defecto es:");
