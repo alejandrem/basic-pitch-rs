@@ -1,0 +1,181 @@
+{
+  "descripcion": "Frontend completo de TensorFlow sobre audio real, con el ventaneo del upstream. Oraculo del test de extremo a extremo.",
+  "cadena": "librosa.load(sr=22050, mono=True) -> relleno inicial de 3840 ceros -> ventanas de 43844 con salto 36164 -> modelo",
+  "puntos": {
+    "vocadito_10_v0_cqt.npy": {
+      "audio": "vocadito_10",
+      "ventana": 0,
+      "t_inicio_s": 0.0,
+      "etapa": "cqt",
+      "shape": [
+        1,
+        172,
+        309
+      ],
+      "dtype": "float32",
+      "min": 0.0,
+      "max": 6.0141401290893555
+    },
+    "vocadito_10_v0_normalized_log.npy": {
+      "audio": "vocadito_10",
+      "ventana": 0,
+      "t_inicio_s": 0.0,
+      "etapa": "normalized_log",
+      "shape": [
+        1,
+        172,
+        309
+      ],
+      "dtype": "float32",
+      "min": 0.0,
+      "max": 1.0
+    },
+    "vocadito_10_v0_batch_norm.npy": {
+      "audio": "vocadito_10",
+      "ventana": 0,
+      "t_inicio_s": 0.0,
+      "etapa": "batch_norm",
+      "shape": [
+        1,
+        172,
+        309,
+        1
+      ],
+      "dtype": "float32",
+      "min": -0.8769183158874512,
+      "max": 1.6038227081298828
+    },
+    "vocadito_10_v0_harmonic_stacking.npy": {
+      "audio": "vocadito_10",
+      "ventana": 0,
+      "t_inicio_s": 0.0,
+      "etapa": "harmonic_stacking",
+      "shape": [
+        1,
+        172,
+        264,
+        8
+      ],
+      "dtype": "float32",
+      "min": -0.8769183158874512,
+      "max": 1.6038227081298828
+    },
+    "vocadito_10_v1_cqt.npy": {
+      "audio": "vocadito_10",
+      "ventana": 1,
+      "t_inicio_s": 1.6400907029478458,
+      "etapa": "cqt",
+      "shape": [
+        1,
+        172,
+        309
+      ],
+      "dtype": "float32",
+      "min": 3.4395603165648936e-07,
+      "max": 7.254833698272705
+    },
+    "vocadito_10_v1_normalized_log.npy": {
+      "audio": "vocadito_10",
+      "ventana": 1,
+      "t_inicio_s": 1.6400907029478458,
+      "etapa": "normalized_log",
+      "shape": [
+        1,
+        172,
+        309
+      ],
+      "dtype": "float32",
+      "min": 0.0,
+      "max": 1.0
+    },
+    "vocadito_10_v1_batch_norm.npy": {
+      "audio": "vocadito_10",
+      "ventana": 1,
+      "t_inicio_s": 1.6400907029478458,
+      "etapa": "batch_norm",
+      "shape": [
+        1,
+        172,
+        309,
+        1
+      ],
+      "dtype": "float32",
+      "min": -0.8769183158874512,
+      "max": 1.6038227081298828
+    },
+    "vocadito_10_v1_harmonic_stacking.npy": {
+      "audio": "vocadito_10",
+      "ventana": 1,
+      "t_inicio_s": 1.6400907029478458,
+      "etapa": "harmonic_stacking",
+      "shape": [
+        1,
+        172,
+        264,
+        8
+      ],
+      "dtype": "float32",
+      "min": -0.8769183158874512,
+      "max": 1.6038227081298828
+    },
+    "vocadito_14_v0_cqt.npy": {
+      "audio": "vocadito_14",
+      "ventana": 0,
+      "t_inicio_s": 0.0,
+      "etapa": "cqt",
+      "shape": [
+        1,
+        172,
+        309
+      ],
+      "dtype": "float32",
+      "min": 0.0,
+      "max": 2.15350341796875
+    },
+    "vocadito_14_v0_normalized_log.npy": {
+      "audio": "vocadito_14",
+      "ventana": 0,
+      "t_inicio_s": 0.0,
+      "etapa": "normalized_log",
+      "shape": [
+        1,
+        172,
+        309
+      ],
+      "dtype": "float32",
+      "min": 0.0,
+      "max": 1.0
+    },
+    "vocadito_14_v0_batch_norm.npy": {
+      "audio": "vocadito_14",
+      "ventana": 0,
+      "t_inicio_s": 0.0,
+      "etapa": "batch_norm",
+      "shape": [
+        1,
+        172,
+        309,
+        1
+      ],
+      "dtype": "float32",
+      "min": -0.8769183158874512,
+      "max": 1.6038227081298828
+    },
+    "vocadito_14_v0_harmonic_stacking.npy": {
+      "audio": "vocadito_14",
+      "ventana": 0,
+      "t_inicio_s": 0.0,
+      "etapa": "harmonic_stacking",
+      "shape": [
+        1,
+        172,
+        264,
+        8
+      ],
+      "dtype": "float32",
+      "min": -0.8769183158874512,
+      "max": 1.6038227081298828
+    }
+  },
+  "sha256": "SHA256SUMS en este directorio"
+}

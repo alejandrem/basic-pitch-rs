@@ -17,6 +17,9 @@ thiserror.workspace = true
 tracing.workspace = true
 
 [dev-dependencies]
-# Solo para tests y ejemplos: leer los .npy de la referencia.
+# Solo para tests y ejemplos: la cadena de audio completa y los .npy de
+# la referencia.
+basic-pitch-audio-io.workspace = true
+basic-pitch-audio-preprocess.workspace = true
 basic-pitch-reference-npy.workspace = true
 tempfile.workspace = true

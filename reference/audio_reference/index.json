@@ -1,0 +1,33 @@
+{
+  "vocadito_10": {
+    "file": "vocadito_10_mono22050.npy",
+    "shape": [
+      200607
+    ],
+    "dtype": "float32",
+    "sample_rate": 22050,
+    "min": -0.6129211187362671,
+    "max": 0.9200350642204285,
+    "mean": 0.00021681767248082906,
+    "rms": 0.14818151470111315,
+    "sha256": "b16741a9074e085beabcb11a06d09498f0a3144ab4792c0e6d174118596e179e",
+    "origen": "basic-pitch/tests/resources/vocadito_10.wav",
+    "cadena": "librosa.load(sr=22050, mono=True) -> to_mono (promedio) -> resample soxr_hq"
+  },
+  "vocadito_14": {
+    "file": "vocadito_14_mono22050.npy",
+    "shape": [
+      268962
+    ],
+    "dtype": "float32",
+    "sample_rate": 22050,
+    "min": -0.4203067421913147,
+    "max": 0.5041680335998535,
+    "mean": -2.3299638996832073e-05,
+    "rms": 0.06087268245559905,
+    "sha256": "112a5d356351d1ea9e86d83eb1c5cd354f935f13566bfcfe2def925eed0cc8de",
+    "origen": "basic-pitch/tests/resources/vocadito_14.wav",
+    "cadena": "librosa.load(sr=22050, mono=True) -> to_mono (promedio) -> resample soxr_hq"
+  },
+  "_nota": "Oraculo de la Fase 3: la senal mono a 22050 Hz tal y como la produce la referencia (librosa 0.10.2 + soundfile + soxr_hq), para medir la diferencia entre Symphonia y soundfile en la decodificacion."
+}

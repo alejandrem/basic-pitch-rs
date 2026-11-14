@@ -84,6 +84,7 @@ name = "basic-pitch-audio-preprocess"
 version = "0.1.0"
 dependencies = [
  "basic-pitch-audio-io",
+ "basic-pitch-reference-npy",
  "soxr",
  "tempfile",
  "thiserror 2.0.21",
@@ -116,6 +117,8 @@ dependencies = [
 name = "basic-pitch-model"
 version = "0.1.0"
 dependencies = [
+ "basic-pitch-audio-io",
+ "basic-pitch-audio-preprocess",
  "basic-pitch-cqt",
  "basic-pitch-reference-npy",
  "candle-core",
