@@ -87,6 +87,55 @@ Por ejemplo, se utilizarán matrices con valores identificables por posición pa
 
 **Entregable de la fase:** Harmonic Stacking implementado y validado.
 
+### 5.4.1. Un test por desplazamiento
+
+`crates/basic-pitch-model/tests/harmonic_shifts.rs` tiene un test
+independiente para cada uno de los ocho armónicos (0.5, 1, 2, 3, 4, 5,
+6 y 7). El oráculo de cada uno es la fórmula **literal** de
+`basic_pitch/nn.py`:
+
+```text
+shift == 0  ->  out = x
+shift > 0   ->  out = pad(x[:, :, shift:, :], [[0,0],[0,0],[0,shift],[0,0]])
+shift < 0   ->  out = pad(x[:, :, :shift, :], [[0,0],[0,0],[-shift,0],[0,0]])
+```
+
+Dos detalles de la entrada artificial que hay que acertar, y que
+condicionan el significado de los tests:
+
+- **Los valores empiezan en 1, no en 0.** Si la entrada tuviera ceros, no
+  se podría distinguir un cero *del relleno* de un cero *que viene de la
+  entrada*, y las comprobaciones de asimetría no significarían nada.
+- **Los límites de los ceros dependen del truncado.** Con `shift = +36`
+  sobre 309 bins, el primer cero está en el bin 273, que queda **fuera**
+  de la salida de 264 bins: no hay ningún cero visible. Con
+  `shift = +101` el primer cero sí cae dentro, en el bin 208.
+
+### 5.4.2. La asimetría se comprueba, no se supone
+
+El test comprueba **dónde** van los ceros, que es la parte que distingue
+una implementación de otra:
+
+| Desplazamiento | Los ceros van |
+|---|---|
+| Positivo | al final del eje de frecuencia |
+| Negativo | al principio del eje de frecuencia |
+| Cero | no hay ceros |
+
+Y se comprueba también que el truncado a 264 bins ocurre **después** de
+desplazar: si ocurriera antes, el canal del armónico 7 (`shift = +101`)
+se quedaría sin contenido, porque la entrada truncada a 264 bins solo
+llega hasta el 263 y haría falta hasta el 364.
+
+### 5.4.3. Lo que ya estaba
+
+La fase 5 también pide que no se repita el primer o último bin, no se
+envuelvan los valores, no se cambie el orden de los canales, no se
+interpolen frecuencias y no se sustituyan los ceros por el mínimo de la
+señal. Cada uno de esos puntos tiene su comprobación, y el test de los
+ocho canales verifica el **orden** (el canal 0 es el armónico 0.5, el 1
+es el 1.0, y así).
+
 ## 5.5. Implementación en Rust
 
 `crates/basic-pitch-model/src/harmonic_stacking.rs`.

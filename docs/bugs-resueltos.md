@@ -609,6 +609,61 @@ la forma, y aqui el problema era el `}` final del diccionario.
 duplicado desaparece. Un parser de formato de fichero es codigo que no
 debe estar duplicado.
 
+### B-30. Medir el retardo de grupo con la fase de Goertzel da un falso positivo
+
+**Sintoma.** El test del retardo de grupo fallaba: "la fase rota 1.71
+radianes entre el principio y el final". El remuestreador parecia tener
+un retardo que variaba con el tiempo, lo que deformaria la senal.
+
+**Causa.** No era el remuestreador, era **el metodo de medida**. La fase
+que devuelve el algoritmo de Goertzel tiene un sesgo que depende de la
+posicion de la ventana cuando esta no contiene un numero entero de
+periodos de la frecuencia medida. Ese sesgo es indistinguible de una
+deriva de fase.
+
+Se comprobo de dos maneras:
+
+- Midiendo la fase de la senal **ideal, sin remuestrear**: derivaba
+  exactamente lo mismo (1,71 radianes).
+- Midiendo la salida de `librosa.resample(res_type="soxr_hq")` de la
+  referencia: fase **identica** a la ideal, sample a sample. Es decir,
+  `soxr_hq` no deforma la fase en absoluto.
+
+Ademas, el primer intento en Python tenia un bug mas grave: el
+coeficiente de la recurrencia era `2*omega*cos(omega)` en vez de
+`2*cos(omega)`, lo que hacia que la magnitud saliera **cero** para un
+seno perfecto. El de Rust era correcto.
+
+**Solucion.** Medir el retardo de grupo con los **cruces de cero
+ascendentes**: si el retardo es constante, el espaciado entre cruces es
+exactamente el periodo, sin ambiguedad. Y el helper de Goertzel usa
+ventana de Hann con normalizacion por la ganancia coherente, que ademas
+hace la magnitud correcta para cualquier numero de periodos.
+
+**Aprendizaje.** Cuando una medicion da un resultado raro, hay que
+**medir el fenomeno con otro metodo** antes de culpar al codigo. Si la
+senal ideal derivea igual, el metodo es el culpable.
+
+### B-31. Los tests de la matriz de la fase 3 faltaban casi todos
+
+**Sintoma.** Ninguno: era un hueco de cobertura, no un fallo.
+
+**Causa.** La implementacion de la fase 3 se habia validado contra la
+referencia (que es lo importante), pero la **matriz de pruebas** que
+enuncia el apartado 3.5 del plan no estaba completa: solo se cubrian
+dos de los nueve escenarios, y los formatos MP3, FLAC, OGG y M4A no se
+habian probado nunca.
+
+**Solucion.** Tres ficheros de test nuevos (`formats.rs`, `resampler.rs`,
+`scenarios.rs`) con 25 tests, y los fixtures multiformato generados por
+`tools/weight-export/make_audio_fixtures.py`.
+
+**Lo que sale de ahi.** Los fixtures son el mismo contenido en cinco
+formatos, y la comprobacion no es "ha devuelto samples" sino que el
+contenido sea el correcto: se mide la magnitud en la frecuencia de cada
+canal y el desfase entre canales. Ademas se descubre que con 1,5
+segundos de audio la referencia produce **DOS** ventanas y no una,
+porque el relleno inicial (3840) se pasa del salto (36164).
 ## Resumen
 
 | Bloque | Categoria | Cantidad | De ellos silenciosos |
@@ -617,8 +672,12 @@ debe estar duplicado.
 | P1 | Bugs del codigo | 12 | 4 |
 | P1 | Diferencias de API entre versiones | 1 (8 casos) | - |
 | P2 | Trampas de la referencia (documentales) | 4 | 3 |
-| P2 | Bugs del codigo | 6 | 1 |
-| **Total** | | **30** | **14** |
+| P2 | Bugs del codigo | 8 | 2 |
+| **Total** | | **32** | **15** |
+
+Ademas, dos entradas documentan **huecos de cobertura** que no eran
+fallos: B-31 (la matriz de pruebas de la fase 3 estaba casi vacia) y
+B-29 (el parser de `.npy` duplicado).
 
 **Los 14 silenciosos** (el programa no falla, devuelve numeros
 plausibles) son los que justifican la validacion etapa a etapa contra

@@ -326,3 +326,29 @@ apartado:
 El test de BatchNorm comprueba además que el **error medio** del
 NormalizedLog se mantiene por debajo de 1e-4, que es la comprobación
 estricta: si el error grande se generalizara, ese test lo detectaría.
+
+### 4.7.5. El informe se guarda, no solo se imprime
+
+El apartado 4.5 pide que «cada resultado se guardará con sus dimensiones,
+tipo de datos y métricas de error». Imprimir por pantalla no es guardar:
+el informe se perdía en el scroll del terminal.
+
+`cargo run --example validar_frontend -p basic-pitch-model` escribe ahora
+**`reference/validation_results.json`**, con una entrada por etapa:
+
+```json
+"CQT": {
+  "shape_rust": [1, 172, 309],
+  "shape_referencia": [1, 172, 309],
+  "dtype": "float32",
+  "mae": 1.762387e-7,
+  "rmse": 2.834531e-7,
+  "max_abs_diff": 5.722046e-6,
+  "max_rel_diff": 3.186061e-7,
+  "tolerancia": "2e-5"
+}
+```
+
+Es la foto del estado de la validación: si alguien cambia el frontend, el
+fichero deja de coincidir con lo que dice el código, y el test de
+regresión lo detecta.

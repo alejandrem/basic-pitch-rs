@@ -285,3 +285,67 @@ for i in range(0, audio_original.shape[0], hop_size):
 Coinciden los tres puntos: el desplazamiento entre ventanas, el relleno
 final con ceros y el número de ventanas (`ceil((len + 3840) / 36164)`).
 
+### 3.6.5. La matriz de pruebas del apartado 3.5
+
+Los nueve escenarios que enumera el apartado 3.5 tienen su test, y cada
+uno escribe un archivo real, lo decodifica y comprueba el contrato del
+modelo:
+
+| Escenario | Test | Fichero |
+|---|---|---|
+| Audio mono | `audio_mono` | `tests/scenarios.rs` |
+| Audio estéreo | `audio_estereo` | `tests/scenarios.rs` |
+| Menos de dos segundos | `audio_de_menos_de_dos_segundos` | `tests/scenarios.rs` |
+| Exactamente dos segundos | `audio_de_exactamente_dos_segundos` | `tests/scenarios.rs` |
+| Varios minutos | `audio_de_varios_minutos` | `tests/scenarios.rs` |
+| Silencio inicial y final | `audio_con_silencio_inicial_y_final` | `tests/scenarios.rs` |
+| Distintas frecuencias de muestreo | `archivos_con_diferentes_frecuencias_de_muestreo` | `tests/scenarios.rs` |
+| Distintos formatos | 8 tests | `tests/formats.rs` |
+| Cerca de los límites de amplitud | `senales_cerca_de_los_limites_de_amplitud` | `tests/scenarios.rs` |
+| Transitorios al inicio y al final | `audio_con_transitorios_al_inicio_y_al_final` | `tests/scenarios.rs` |
+
+**Los formatos por separado.** Los fixtures son el mismo contenido en
+cinco formatos (`tools/weight-export/make_audio_fixtures.py`):
+
+| Formato | Codec | Pérdidas |
+|---|---|---|
+| WAV | PCM 16 bits | ninguna |
+| FLAC | FLAC | ninguna |
+| MP3 | LAME, 128 kbps | sí |
+| OGG | Vorbis, 128 kbps | sí |
+| M4A | AAC, 128 kbps | sí |
+
+La comprobación no es «ha devuelto muestras», sino que el **contenido**
+sea el correcto: se mide la magnitud en la frecuencia de cada canal con
+Goertzel (220 Hz a la izquierda, 330 Hz a la derecha) y el desfase entre
+canales, que es lo que verifica que no se han intercambiado. Los
+formatos con pérdidas tienen tolerancias más anchas.
+
+### 3.6.6. Los seis puntos delicados del remuestreador
+
+El apartado 3.3 pide atención explícita a seis cosas. Las seis tienen su
+test en `tests/resampler.rs`:
+
+| Punto | Cómo se comprueba |
+|---|---|
+| Calidad del filtro | La magnitud en la fundamental se conserva y no hay energía espurio a 1000 Hz |
+| Retardo de grupo | Con los cruces de cero ascendentes: si el retardo es constante, el espaciado es exactamente el periodo |
+| Tratamiento de los extremos | Un impulso central no produce transitorios espurios en los bordes |
+| Número final de muestras | `ceil(len * to / from)` en nueve pares de frecuencias |
+| Diferencias de amplitud | El remuestreador **no** normaliza: se comprueba con tres escalas |
+| Frecuencias poco habituales | 8000, 11025, 17000, 32000, 48000 y 96000 Hz, y razones de 2,75 y 8 |
+
+**Por qué los cruces de cero y no la fase.** La fase de Goertzel tiene un
+sesgo que depende de la posición de la ventana cuando esta no contiene
+un número entero de periodos de la frecuencia medida, y ese sesgo es
+**indistinguible** de una deriva de fase. Con los cruces de cero no hay
+ambigüedad: si el retardo de grupo es constante, el espaciado entre
+cruces es exactamente el periodo.
+
+> **Trampa documentada:** medir el retardo de grupo con la fase de
+> Goertzel produce un falso positivo. En este proyecto, la fase medida
+> «derivaba» 1,7 radianes entre el principio y el final de la señal...
+> y la señal **ideal, sin remuestrear**, derivaba exactamente lo mismo.
+> El error era del método de medida, no del remuestreador.
+
+
