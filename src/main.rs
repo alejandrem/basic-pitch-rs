@@ -1,12 +1,20 @@
 //! CLI de `basic-pitch-rs`.
 //!
-//! Estado actual del proyecto (Fase 2): el workspace compila, los pesos estan
-//! exportados y validados, y el motor esta en construccion. Este comando
-//! informa del estado y valida los artefactos del modelo.
+//! Estado actual del proyecto: el frontend acustico (Fases 3, 4 y 5), la red
+//! neuronal, la reconstruccion temporal (Fase 8) y la deteccion de notas
+//! (Fase 9) estan implementados y validados contra la referencia de
+//! TensorFlow.
+//!
+//! ```text
+//! basic-pitch info [dir]                Muestra el contrato del modelo
+//! basic-pitch transcribe <audio> [-o salida.mid]
+//!                                        Transcribe un archivo a MIDI
+//! ```
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
+use basic_pitch_midi_io::MidiWriter;
 use basic_pitch_model::ModelConfig;
 
 const DEFAULT_MODEL_DIR: &str = "models/basic-pitch/icassp-2022";
@@ -35,6 +43,59 @@ fn main() -> ExitCode {
             }
             ExitCode::SUCCESS
         }
+        "transcribe" => {
+            let mut audio: Option<PathBuf> = None;
+            let mut output: Option<PathBuf> = None;
+            let mut model_dir = PathBuf::from(DEFAULT_MODEL_DIR);
+
+            while let Some(arg) = args.next() {
+                match arg.as_str() {
+                    "-o" | "--output" => match args.next() {
+                        Some(ruta) => output = Some(PathBuf::from(ruta)),
+                        None => {
+                            eprintln!("error: -o necesita una ruta");
+                            return ExitCode::FAILURE;
+                        }
+                    },
+                    "-m" | "--model" => match args.next() {
+                        Some(ruta) => model_dir = PathBuf::from(ruta),
+                        None => {
+                            eprintln!("error: -m necesita una ruta");
+                            return ExitCode::FAILURE;
+                        }
+                    },
+                    "-h" | "--help" => {
+                        print_help();
+                        return ExitCode::SUCCESS;
+                    }
+                    otra => {
+                        if audio.is_none() {
+                            audio = Some(PathBuf::from(otra));
+                        } else {
+                            eprintln!("error: sobran argumentos: {otra}");
+                            return ExitCode::FAILURE;
+                        }
+                    }
+                }
+            }
+
+            let Some(audio) = audio else {
+                eprintln!("error: falta el archivo de audio\n");
+                print_help();
+                return ExitCode::FAILURE;
+            };
+
+            match transcribe(&audio, output.as_deref(), &model_dir) {
+                Ok(mensaje) => {
+                    println!("{mensaje}");
+                    ExitCode::SUCCESS
+                }
+                Err(error) => {
+                    eprintln!("error: {error}");
+                    ExitCode::FAILURE
+                }
+            }
+        }
         "--help" | "-h" | "help" => {
             print_help();
             ExitCode::SUCCESS
@@ -47,6 +108,34 @@ fn main() -> ExitCode {
     }
 }
 
+/// Transcribe un archivo de audio y escribe el MIDI.
+fn transcribe(audio: &Path, output: Option<&Path>, model_dir: &Path) -> Result<String, String> {
+    let transcriptor = basic_pitch_transcription::Transcriber::load(model_dir)
+        .map_err(|e| format!("no se pudo cargar el modelo: {e}"))?;
+
+    let resultado = transcriptor
+        .transcribe(audio)
+        .map_err(|e| format!("no se pudo transcribir {audio:?}: {e}"))?;
+
+    let destino = output
+        .map(PathBuf::from)
+        .unwrap_or_else(|| audio.with_extension("mid"));
+
+    // El evento musical es UNO solo (el canonico de midi-io), con la
+    // velocidad ya calculada a partir de la amplitud del modelo.
+    MidiWriter::new()
+        .write(&resultado.notes, &destino)
+        .map_err(|e| format!("no se pudo escribir {:?}: {e}", destino))?;
+
+    Ok(format!(
+        "{} -> {}  ({} notas, {:.2} s de audio)",
+        audio.display(),
+        destino.display(),
+        resultado.notes.len(),
+        resultado.duration_seconds
+    ))
+}
+
 fn print_help() {
     println!("basic-pitch-rs - transcripcion musical en Rust");
     println!();
@@ -54,8 +143,13 @@ fn print_help() {
     println!("    basic-pitch <comando>");
     println!();
     println!("COMANDOS:");
-    println!("    info [dir]    Muestra la configuracion del modelo y valida sus invariantes");
-    println!("    help          Muestra esta ayuda");
+    println!(
+        "    info [dir]              Muestra la configuracion del modelo y valida sus invariantes"
+    );
+    println!("    transcribe <audio>      Transcribe un archivo de audio a MIDI");
+    println!("        -o <salida.mid>    Ruta del MIDI de salida (por defecto, junto al audio)");
+    println!("        -m <dir_modelo>    Directorio del modelo");
+    println!("    help                    Muestra esta ayuda");
     println!();
     println!("El directorio del modelo por defecto es:");
     println!("    {DEFAULT_MODEL_DIR}");

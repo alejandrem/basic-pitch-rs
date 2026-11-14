@@ -57,11 +57,28 @@ fn la_cadena_completa_se_ejecuta_sobre_un_archivo_real() {
         "duracion inesperada: {duracion}"
     );
 
-    // La deteccion de notas es de la Fase 9: todavia no hay notas.
+    // La deteccion de notas (Fase 9) ya funciona: el upstream encuentra 28
+    // notas en este audio.
     assert!(
-        resultado.notes.is_empty(),
-        "la deteccion de notas todavia no esta implementada"
+        !resultado.notes.is_empty(),
+        "la deteccion de notas no deberia devolver una lista vacia"
     );
+    for nota in &resultado.notes {
+        assert!(
+            (21..=108).contains(&nota.pitch),
+            "pitch fuera de rango: {}",
+            nota.pitch
+        );
+        assert!(
+            nota.start_time <= nota.end_time,
+            "la nota empieza despues de acabar"
+        );
+        assert!(
+            (0.0..=1.0).contains(&nota.amplitude),
+            "amplitud fuera de rango: {}",
+            nota.amplitude
+        );
+    }
 }
 
 #[test]

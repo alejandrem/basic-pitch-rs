@@ -13,3 +13,10 @@
 # Cache de Python
 __pycache__/
 *.py[cod]
+
+# Material personal del usuario: el MIDI original y el audio renderizado
+# de "peso del silencio" no se versionan. El audio pesa 30 MB y la cancion
+# es del autor del proyecto.
+reference/audio_reference/peso_del_silencio.wav
+reference/notes/peso_del_silencio_notes.npy
+reference/notes/peso_del_silencio_upstream.mid

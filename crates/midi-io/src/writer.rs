@@ -4,7 +4,11 @@
 //!
 //! - Resolucion: 220 ticks por negra (la que usa `pretty_midi` por defecto).
 //! - Tempo inicial: 120 BPM, igual que `DEFAULT_MINIMUM_MIDI_TEMPO`.
-//! - Programa: `Electric Piano 1` (programa GM 4), como en la referencia.
+//! - Programa: `Acoustic Grand Piano` (programa GM **0**).
+//!
+//!   La referencia usa `Electric Piano 1` (GM 4), pero aqui se usa el piano
+//!   acustico por decision del proyecto: es lo que suena mas natural en un
+//!   archivo MIDIExportado, y es lo que usaba el MIDI de origen.
 //! - Pitch bend: valor de 14 bits con 8192 como centro; el rango util son
 //!   +-2 semitonas.
 //!
@@ -54,6 +58,11 @@ pub const ELECTRIC_PIANO_1: u8 = 4;
 /// Valor de pitch bend que representa el centro.
 pub const PITCH_BEND_CENTER: i16 = 8192;
 
+/// Programa General MIDI por defecto: `Acoustic Grand Piano` (GM 0).
+///
+/// Decision del proyecto. La referencia usa `Electric Piano 1` (GM 4).
+pub const DEFAULT_PROGRAM: u8 = 0;
+
 /// Escribe eventos musicales en un archivo MIDI.
 #[derive(Debug, Clone)]
 pub struct MidiWriter {
@@ -61,6 +70,22 @@ pub struct MidiWriter {
     pub resolution: u16,
     /// Tempo inicial, en pulsos por minuto.
     pub tempo: f64,
+    /// Programa General MIDI del instrumento.
+    ///
+    /// Por defecto, `Acoustic Grand Piano` (programa GM **0**).
+    ///
+    /// La referencia usa `Electric Piano 1` (GM 4):
+    ///
+    /// ```python
+    /// piano_program = pretty_midi.instrument_name_to_program("Electric Piano 1")
+    /// ```
+    ///
+    /// Aqui se usa el piano acustico por decision del proyecto. Sin un
+    /// evento de cambio de programa, el reproductor usaria el programa por
+    /// defecto del canal 0, que es justamente `Acoustic Grand Piano` (GM 0):
+    /// o se emite el cambio de programa, o el resultado depende de lo que
+    /// haga el reproductor. Se emite, para que el MIDI sea explicito.
+    pub program: u8,
     /// Si se asigna un canal distinto a cada nota MIDI.
     ///
     /// Es lo que hace la referencia cuando `multiple_pitch_bends` es verdadero.
@@ -72,6 +97,7 @@ impl Default for MidiWriter {
         Self {
             resolution: DEFAULT_RESOLUTION,
             tempo: DEFAULT_TEMPO,
+            program: DEFAULT_PROGRAM,
             multiple_pitch_bends: false,
         }
     }
@@ -115,6 +141,21 @@ impl MidiWriter {
             Timing::Metrical(u15::new(self.resolution)),
         );
 
+        // Las notas se ordenan por tiempo de inicio y, a igualdad de
+        // tiempo, por pitch.
+        //
+        // La deteccion de notas entrega las notas en el orden en que las
+        // encuentra (los onsets, de mas reciente a mas antiguo, y luego el
+        // truco de Melodia), no en orden temporal. Sin ordenar, el MIDI
+        // tendria los eventos en un orden que no es el canonico.
+        let mut ordenadas: Vec<&NoteEvent> = notes.iter().collect();
+        ordenadas.sort_by(|a, b| {
+            a.start_time
+                .partial_cmp(&b.start_time)
+                .unwrap_or(std::cmp::Ordering::Equal)
+                .then(a.pitch.cmp(&b.pitch))
+        });
+
         // Se agrupan las notas por canal.
         //
         // Con `multiple_pitch_bends`, cada nota MIDI tiene su propio canal
@@ -132,7 +173,21 @@ impl MidiWriter {
             TrackEventKind::Meta(MetaMessage::TimeSignature(4, 2, 24, 8)),
         ));
 
-        for note in notes {
+        // Cambio de programa: sin el, el reproductor usaria el programa por
+        // defecto del canal (Acoustic Grand Piano) en vez del de la
+        // referencia (Electric Piano 1).
+        tracks[0].push((
+            0,
+            TrackEventKind::Midi {
+                channel: u4::new(0),
+                message: MidiMessage::ProgramChange {
+                    program: u7::new(self.program),
+                },
+            },
+        ));
+
+        for note in &ordenadas {
+            let note = *note;
             let channel = self.channel_for(note.pitch);
             let track_index = if self.multiple_pitch_bends {
                 channel as usize
@@ -169,7 +224,7 @@ impl MidiWriter {
             ));
 
             // Pitch bend: un evento por punto de la secuencia.
-            if let Some(bends) = &note.pitch_bends {
+            if let Some(bends) = &note.pitch_bend {
                 let count = bends.len().max(1);
                 for (i, bend) in bends.iter().enumerate() {
                     let t = note.start_time + (note.duration() * i as f64 / count as f64);
@@ -264,5 +319,57 @@ mod tests {
     fn un_evento_invalido_produce_error() {
         let notes = vec![NoteEvent::new(0.0, 1.0, 200, 100)];
         assert!(MidiWriter::new().build(&notes).is_err());
+    }
+
+    #[test]
+    fn el_programa_por_defecto_es_el_piano_acustico() {
+        // Decision del proyecto: piano acustico (GM 0). La referencia usa
+        // Electric Piano 1 (GM 4).
+        assert_eq!(DEFAULT_PROGRAM, 0);
+        assert_eq!(MidiWriter::new().program, 0);
+    }
+
+    #[test]
+    fn el_midi_lleva_el_cambio_de_programa() {
+        let notes = vec![NoteEvent::new(0.0, 1.0, 60, 100)];
+        let writer = MidiWriter::new();
+        let smf = writer.build(&notes).unwrap();
+
+        // El cambio de programa tiene que estar en el primer track.
+        let mut encontrado = false;
+        for evento in smf.tracks[0].iter() {
+            if let TrackEventKind::Midi {
+                message: MidiMessage::ProgramChange { program },
+                ..
+            } = &evento.kind
+            {
+                assert_eq!(program.as_int(), DEFAULT_PROGRAM);
+                encontrado = true;
+            }
+        }
+        assert!(encontrado, "el MIDI no lleva cambio de programa");
+    }
+
+    #[test]
+    fn el_programa_se_puede_cambiar() {
+        let notes = vec![NoteEvent::new(0.0, 1.0, 60, 100)];
+        let writer = MidiWriter {
+            program: 0, // Acoustic Grand Piano
+            ..MidiWriter::new()
+        };
+        let smf = writer.build(&notes).unwrap();
+
+        let mut encontrado = false;
+        for evento in smf.tracks[0].iter() {
+            if let TrackEventKind::Midi {
+                message: MidiMessage::ProgramChange { program },
+                ..
+            } = &evento.kind
+            {
+                assert_eq!(program.as_int(), 0);
+                encontrado = true;
+            }
+        }
+        assert!(encontrado);
     }
 }

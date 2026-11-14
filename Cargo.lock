@@ -146,6 +146,7 @@ dependencies = [
  "basic-pitch-audio-io",
  "basic-pitch-audio-preprocess",
  "basic-pitch-cqt",
+ "basic-pitch-midi-io",
  "basic-pitch-model",
  "basic-pitch-reference-npy",
  "candle-core",
