@@ -68,8 +68,8 @@ ONNX oficial.
 | --- | --- | --- | --- | --- |
 | **P1** (0 + 1 + 2) | Auditoría + pesos + workspace. Todo mecánico, todo con el modelo y el código ya en disco. Deja listo el oráculo de referencia. | Bajo | **Cerrado** ([estado](estado-p1.md)) |
 | **P2** (3 + 4 + 5) | Audio → CQT → NormalizedLog → BN → HarmonicStacking. El bloque numérico difícil. Con kernels extraídos del ONNX es viable en un prompt. | Alto | **Cerrado** ([estado](estado-p2.md)) |
-| **P3** (6 + 7) | Red Candle + validación de equivalencia etapa por etapa. | Medio | Pendiente |
-| **P4** (8 + 9 + 10 + 11) | Ventanas/reconstrucción → notas → pitch bend → MIDI. Es port de numpy casi 1:1. | Bajo | Pendiente |
+| **P3** (6 + 7+ 8) | Red Candle + validación de equivalencia etapa por etapa. | Medio | Pendiente |
+| **P4** ( + 9 + 10 + 11) | Ventanas/reconstrucción → notas → pitch bend → MIDI. Es port de numpy casi 1:1. | Bajo | Pendiente |
 | **P5** (12 + 13 + 14 + 15) | API + tests + CI + perf + docs. | Bajo | Pendiente |
 
 
