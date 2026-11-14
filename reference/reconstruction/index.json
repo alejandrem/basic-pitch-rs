@@ -1,0 +1,90 @@
+{
+  "descripcion": "Reconstruccion temporal del upstream (basic_pitch.inference.unwrap_output) sobre audio real. Oraculo de la Fase 8.",
+  "nota": "Las matrices vienen de la funcion del upstream sin modificar, no de una reimplementacion.",
+  "puntos": {
+    "vocadito_10_note.npy": {
+      "audio": "vocadito_10",
+      "etapa": "note",
+      "shape": [
+        787,
+        88
+      ],
+      "dtype": "float32",
+      "min": 0.07911328226327896,
+      "max": 0.8968442678451538,
+      "mean": 0.10980306565761566,
+      "audio_original_length": 200607,
+      "n_ventanas": 6
+    },
+    "vocadito_10_onset.npy": {
+      "audio": "vocadito_10",
+      "etapa": "onset",
+      "shape": [
+        787,
+        88
+      ],
+      "dtype": "float32",
+      "min": 0.03333043307065964,
+      "max": 0.9469608068466187,
+      "mean": 0.11835586279630661,
+      "audio_original_length": 200607,
+      "n_ventanas": 6
+    },
+    "vocadito_10_contour.npy": {
+      "audio": "vocadito_10",
+      "etapa": "contour",
+      "shape": [
+        787,
+        264
+      ],
+      "dtype": "float32",
+      "min": 0.05687989667057991,
+      "max": 0.7013127207756042,
+      "mean": 0.10557125508785248,
+      "audio_original_length": 200607,
+      "n_ventanas": 6
+    },
+    "vocadito_14_note.npy": {
+      "audio": "vocadito_14",
+      "etapa": "note",
+      "shape": [
+        1056,
+        88
+      ],
+      "dtype": "float32",
+      "min": 0.08305393904447556,
+      "max": 0.9230066537857056,
+      "mean": 0.10646519809961319,
+      "audio_original_length": 268962,
+      "n_ventanas": 8
+    },
+    "vocadito_14_onset.npy": {
+      "audio": "vocadito_14",
+      "etapa": "onset",
+      "shape": [
+        1056,
+        88
+      ],
+      "dtype": "float32",
+      "min": 0.03369435667991638,
+      "max": 0.9078034162521362,
+      "mean": 0.10727208107709885,
+      "audio_original_length": 268962,
+      "n_ventanas": 8
+    },
+    "vocadito_14_contour.npy": {
+      "audio": "vocadito_14",
+      "etapa": "contour",
+      "shape": [
+        1056,
+        264
+      ],
+      "dtype": "float32",
+      "min": 0.05683447793126106,
+      "max": 0.8446054458618164,
+      "mean": 0.1033187061548233,
+      "audio_original_length": 268962,
+      "n_ventanas": 8
+    }
+  }
+}

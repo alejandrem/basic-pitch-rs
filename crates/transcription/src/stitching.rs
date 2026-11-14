@@ -1,6 +1,13 @@
 //! Reconstruccion temporal de las predicciones de multiples ventanas.
 //!
-//! # Comportamiento de compatibilidad (no corregir)
+//! # Que hace
+//!
+//! El modelo se aplica a ventanas de dos segundos que se solapan. Las
+//! predicciones de cada ventana **no** se pueden concatenar tal cual: hay
+//! frames duplicados en los limites. La reconstruccion los quita y produce
+//! una unica matriz de frames.
+//!
+//! # El comportamiento de compatibilidad (no corregir)
 //!
 //! La reconstruccion reproduce literalmente `basic_pitch/inference.py`:
 //!
@@ -29,15 +36,28 @@
 //! El desplazamiento temporal se acumula mas lentamente de lo que "deberia".
 //! Es un defecto del upstream, pero corregirlo cambiaria los tiempos de las
 //! notas respecto a los de Spotify, que es justo lo que se quiere reproducir.
+//!
+//! # Nota sobre el layout
+//!
+//! Las salidas del modelo son `(batch, 172, n_freqs)`, con el tiempo antes
+//! que la frecuencia: exactamente el layout que espera el upstream. Por eso
+//! la reconstruccion no necesita ninguna conversion.
+
+use candle_core::Tensor;
+
+use basic_pitch_model::ModelOutput;
 
 /// Numero de frames superpuestos entre ventanas consecutivas.
-pub const N_OVERLAPPING_FRAMES: usize = 30;
+///
+/// Viene del modulo de audio, que es quien produce las ventanas: asi la
+/// reconstruccion y el ventaneo **no pueden** desincronizarse.
+pub const N_OVERLAPPING_FRAMES: usize = basic_pitch_audio_preprocess::N_OVERLAPPING_FRAMES;
 
 /// Frames emitidos por ventana.
-pub const ANNOT_N_FRAMES: usize = 172;
+pub const ANNOT_N_FRAMES: usize = basic_pitch_audio_preprocess::ANNOT_N_FRAMES;
 
 /// Frames conservados por ventana tras descartar los solapados.
-pub const FRAMES_KEPT_PER_WINDOW: usize = ANNOT_N_FRAMES - N_OVERLAPPING_FRAMES; // 142
+pub const FRAMES_KEPT_PER_WINDOW: usize = basic_pitch_audio_preprocess::FRAMES_KEPT_PER_WINDOW; // 142
 
 /// Frames descartados por delante y por detras en cada ventana.
 pub const N_OLAP: usize = N_OVERLAPPING_FRAMES / 2; // 15
@@ -45,10 +65,44 @@ pub const N_OLAP: usize = N_OVERLAPPING_FRAMES / 2; // 15
 /// Desplazamiento de alineacion magico del upstream, en segundos.
 pub const MAGIC_ALIGNMENT_OFFSET: f64 = 0.0018;
 
+/// Desplazamiento entre ventanas, en muestras.
+pub const HOP_SIZE: usize = basic_pitch_audio_preprocess::HOP_SIZE;
+
+/// Error en la reconstruccion temporal.
+#[derive(Debug, thiserror::Error)]
+pub enum StitchingError {
+    /// La forma de una ventana no es la esperada.
+    #[error("una ventana debe tener {ANNOT_N_FRAMES} frames, tiene {actual}")]
+    UnexpectedFrames {
+        /// Frames de la ventana recibida.
+        actual: usize,
+    },
+
+    /// Se han reconstructionido ventanas de distinta anchura.
+    #[error("las ventanas tienen anchuras distintas: {anterior} y {actual}")]
+    InconsistentWidth {
+        /// Anchura de la ventana anterior.
+        anterior: usize,
+        /// Anchura de la ventana actual.
+        actual: usize,
+    },
+
+    /// No se ha reconstructionido ninguna ventana.
+    #[error("no hay ventanas que reconstruir")]
+    NoWindows,
+
+    /// Error de Candle.
+    #[error("error de Candle en la reconstruccion: {0}")]
+    Candle(#[from] candle_core::Error),
+}
+
 /// Calcula el numero de frames que sobreviven a la reconstruccion.
 ///
 /// `audio_original_length` es la longitud del audio **antes** del relleno
 /// inicial, en muestras. `hop_size` es el desplazamiento entre ventanas.
+///
+/// La referencia usa division flotante, no `ceil`:
+/// `int(audio_original_length / hop_size * 142)`.
 pub fn expected_frames(audio_original_length: usize, hop_size: usize) -> usize {
     if hop_size == 0 {
         return 0;
@@ -56,6 +110,204 @@ pub fn expected_frames(audio_original_length: usize, hop_size: usize) -> usize {
     // La referencia usa division flotante, no `ceil`.
     let n_expected_windows = audio_original_length as f64 / hop_size as f64;
     (n_expected_windows * FRAMES_KEPT_PER_WINDOW as f64) as usize
+}
+
+/// Reconstruye las predicciones de una matriz de ventanas.
+///
+/// # Argumentos
+///
+/// - `tensor`: `(n_ventanas, 172, n_freqs)`. Es el layout de las salidas
+///   del modelo: el tiempo antes que la frecuencia.
+/// - `audio_original_length`: longitud del audio **antes** del relleno
+///   inicial, en muestras.
+/// - `n_overlapping_frames`: frames superpuestos (30).
+/// - `hop_size`: desplazamiento entre ventanas, en muestras (36.164).
+///
+/// # Salida
+///
+/// `(n_frames, n_freqs)`, con `n_frames = int(audio_original_length /
+/// hop_size * 142)`.
+///
+/// Es la version "por lotes" de `Unwrapper`: reproduce exactamente el
+/// `unwrap_output` del upstream.
+pub fn unwrap_output(
+    tensor: &Tensor,
+    audio_original_length: usize,
+    n_overlapping_frames: usize,
+    hop_size: usize,
+) -> Result<Tensor, StitchingError> {
+    let (ventanas, frames, _freqs) = tensor.dims3()?;
+    if frames != ANNOT_N_FRAMES {
+        return Err(StitchingError::UnexpectedFrames { actual: frames });
+    }
+
+    let n_frames_finales = expected_frames(audio_original_length, hop_size);
+    let mut reconstructor = Unwrapper::new(n_frames_finales, n_overlapping_frames);
+
+    for v in 0..ventanas {
+        reconstructor.push(&tensor.narrow(0, v, 1)?)?;
+    }
+    reconstructor.finish()
+}
+
+/// Reconstruccion incremental: se le van pasando las ventanas y se van
+/// acumulando sus frames.
+///
+/// Es la misma operacion que `unwrap_output`, pero **no necesita tener todas
+/// las ventanas en memoria**: la prediccion de cada ventana se puede soltar
+/// en cuanto se ha incorporado. Eso es lo que pide el apartado 8.1 de la
+/// fase de inferencia sobre audios de duracion arbitraria.
+///
+/// # Uso
+///
+/// ```ignore
+/// let mut reconstructor = Unwrapper::new(expected_frames(len, hop), 30);
+/// for ventana in ventanas {
+///     reconstructor.push(&salida_de_la_ventana)?;
+/// }
+/// let matriz = reconstructor.finish()?;
+/// ```
+pub struct Unwrapper {
+    /// Frames que se descartan por delante y por detras de cada ventana.
+    n_olap: usize,
+    /// Frames que aporta cada ventana.
+    frames_por_ventana: usize,
+    /// Numero de frames que sobreviven al final.
+    n_frames_finales: usize,
+    /// Tramos ya reconstruidos, uno por ventana.
+    tramos: Vec<Tensor>,
+    /// Anchura (frecuencias) de la salida.
+    freqs: Option<usize>,
+}
+
+impl Unwrapper {
+    /// Crea un reconstruccion.
+    ///
+    /// - `n_frames_finales`: frames que sobreviven. Se calcula con
+    ///   `expected_frames` **antes** de inferir, porque depende solo de la
+    ///   longitud del audio.
+    /// - `n_overlapping_frames`: frames superpuestos entre ventanas (30).
+    pub fn new(n_frames_finales: usize, n_overlapping_frames: usize) -> Self {
+        let n_olap = n_overlapping_frames / 2;
+        Self {
+            n_olap,
+            frames_por_ventana: ANNOT_N_FRAMES - 2 * n_olap,
+            n_frames_finales,
+            tramos: Vec::new(),
+            freqs: None,
+        }
+    }
+
+    /// Incorpora una ventana.
+    ///
+    /// `ventana` es `(1, 172, n_freqs)`: el batch, el tiempo y la
+    /// frecuencia. Es el layout de las salidas del modelo.
+    pub fn push(&mut self, ventana: &Tensor) -> Result<(), StitchingError> {
+        let (_, frames, freqs) = ventana.dims3()?;
+        if frames != ANNOT_N_FRAMES {
+            return Err(StitchingError::UnexpectedFrames { actual: frames });
+        }
+        match self.freqs {
+            None => self.freqs = Some(freqs),
+            Some(anterior) if anterior != freqs => {
+                return Err(StitchingError::InconsistentWidth {
+                    anterior,
+                    actual: freqs,
+                })
+            }
+            Some(_) => {}
+        }
+
+        // Se descartan los frames del borde, igual que hace el upstream
+        // con `output[:, n_olap:-n_olap, :]`.
+        //
+        // El trozo se guarda sin la dimension de batch (`(142, freqs)`),
+        // para que la concatenacion sea sobre el eje del tiempo: asi
+        // `(n_ventanas, 142, freqs)` se convierte en
+        // `(n_ventanas * 142, freqs)`, que es lo que hace el
+        // `reshape` del upstream.
+        let trozo = ventana
+            .narrow(1, self.n_olap, self.frames_por_ventana)?
+            .squeeze(0)?;
+        self.tramos.push(trozo);
+        Ok(())
+    }
+
+    /// Cierra la reconstruccion y devuelve la matriz de frames.
+    pub fn finish(self) -> Result<Tensor, StitchingError> {
+        if self.tramos.is_empty() {
+            return Err(StitchingError::NoWindows);
+        }
+        let refs: Vec<&Tensor> = self.tramos.iter().collect();
+        let matriz = Tensor::cat(&refs, 0)?;
+
+        // Truncado final: `unwrapped_output[: int(n_expected_windows * 142), :]`.
+        // Si sobran frames (porque el audio tiene mas ventanas de las que
+        // aporta el calculo), se descartan.
+        Ok(matriz.narrow(0, 0, self.n_frames_finales.min(matriz.dims2()?.0))?)
+    }
+}
+
+/// Las tres salidas del modelo, ya reconstruidas.
+///
+/// Cada una es una matriz `(n_frames, n_freqs)`:
+///
+/// | Salida | Forma |
+/// |---|---|
+/// | `note` | `(n_frames, 88)` |
+/// | `onset` | `(n_frames, 88)` |
+/// | `contour` | `(n_frames, 264)` |
+#[derive(Debug, Clone)]
+pub struct ReconstructedOutput {
+    /// Activacion de notas.
+    pub note: Tensor,
+    /// Activacion de onsets.
+    pub onset: Tensor,
+    /// Contornos de frecuencia.
+    pub contour: Tensor,
+}
+
+/// Reconstruye las tres salidas del modelo, ventana a ventana.
+///
+/// Es la version incremental de `unwrap_output` para las tres salidas a la
+/// vez: la prediccion de cada ventana se suelta en cuanto se ha
+/// incorporado, en vez de acumularlas todas.
+///
+/// `n_frames_finales` es el numero de frames que sobreviven, que se calcula
+/// con `expected_frames` antes de inferir.
+pub struct ModelUnwrapper {
+    note: Unwrapper,
+    onset: Unwrapper,
+    contour: Unwrapper,
+}
+
+impl ModelUnwrapper {
+    /// Crea un reconstruccion para las tres salidas.
+    pub fn new(n_frames_finales: usize, n_overlapping_frames: usize) -> Self {
+        Self {
+            note: Unwrapper::new(n_frames_finales, n_overlapping_frames),
+            onset: Unwrapper::new(n_frames_finales, n_overlapping_frames),
+            contour: Unwrapper::new(n_frames_finales, n_overlapping_frames),
+        }
+    }
+
+    /// Incorpora la prediccion de una ventana.
+    pub fn push(&mut self, salida: &ModelOutput) -> Result<(), StitchingError> {
+        // Las salidas del modelo ya son (1, 172, n_freqs).
+        self.note.push(&salida.note)?;
+        self.onset.push(&salida.onset)?;
+        self.contour.push(&salida.contour)?;
+        Ok(())
+    }
+
+    /// Cierra la reconstruccion.
+    pub fn finish(self) -> Result<ReconstructedOutput, StitchingError> {
+        Ok(ReconstructedOutput {
+            note: self.note.finish()?,
+            onset: self.onset.finish()?,
+            contour: self.contour.finish()?,
+        })
+    }
 }
 
 /// Convierte un indice de frame a tiempo, en segundos.
@@ -81,19 +333,6 @@ pub fn frame_to_time(
         * (ANNOT_N_FRAMES as f64 - audio_n_samples as f64 / fft_hop as f64)
         + MAGIC_ALIGNMENT_OFFSET;
     original_time - window_offset * window_number
-}
-
-/// Convierte una secuencia de indices de frame a tiempos, en segundos.
-pub fn frames_to_time(
-    frames: &[usize],
-    sample_rate: u32,
-    fft_hop: usize,
-    audio_n_samples: usize,
-) -> Vec<f64> {
-    frames
-        .iter()
-        .map(|f| frame_to_time(*f, sample_rate, fft_hop, audio_n_samples))
-        .collect()
 }
 
 #[cfg(test)]

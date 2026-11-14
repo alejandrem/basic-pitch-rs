@@ -17,6 +17,9 @@ librosa==0.10.2.post1
 pretty_midi>=0.2.9
 mir_eval>=0.6.0
 resampy>=0.2.2,<0.4.3
+# resampy importa pkg_resources, que desde setuptools 81 requiere
+# instalar setuptools explicitamente.
+setuptools<81
 safetensors>=0.4
 numpy<2
 onnx==1.18.0

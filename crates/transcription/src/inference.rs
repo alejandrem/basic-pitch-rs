@@ -6,9 +6,12 @@ use basic_pitch_audio_io::decode_file;
 use basic_pitch_audio_preprocess::{
     resample, to_mono, AudioWindows, AUDIO_SAMPLE_RATE, HOP_SIZE, INITIAL_PADDING,
 };
-use basic_pitch_model::{BasicPitchModel, ModelOutput};
+use basic_pitch_model::BasicPitchModel;
 
 use crate::note_detection::NoteEvent;
+use crate::stitching::{
+    expected_frames, ModelUnwrapper, ReconstructedOutput, N_OVERLAPPING_FRAMES,
+};
 use crate::InferenceConfig;
 
 /// Error durante la transcripcion.
@@ -37,6 +40,10 @@ pub enum TranscriptionError {
     /// Error de Candle.
     #[error("error de Candle: {0}")]
     Candle(#[from] candle_core::Error),
+
+    /// Error en la reconstruccion temporal.
+    #[error("error en la reconstruccion temporal: {0}")]
+    Stitching(#[from] crate::stitching::StitchingError),
 
     /// El archivo no existe.
     #[error("no se encontro el archivo: {0}")]
@@ -124,7 +131,7 @@ impl Transcriber {
         })
     }
 
-    /// Ejecuta el modelo sobre cada ventana y concatena las predicciones.
+    /// Ejecuta el modelo sobre cada ventana y reconstruye las predicciones.
     ///
     /// Cada ventana pasa por el frontend acustico completo:
     ///
@@ -136,22 +143,42 @@ impl Transcriber {
     ///   -> HarmonicStacking (1, 8, 172, 264)   NCHW
     ///   -> BasicPitchModel::forward(...)        -> note, onset, contour
     /// ```
-    fn run_model(&self, windows: &AudioWindows) -> Result<Vec<ModelOutput>, TranscriptionError> {
-        let mut outputs = Vec::with_capacity(windows.len());
-        for window in windows.iter() {
+    ///
+    /// # Por que no se acumulan las predicciones
+    ///
+    /// La prediccion de cada ventana se incorpora **inmediatamente** a la
+    /// reconstruccion temporal, y asi se puede soltar. Acumularlas todas
+    /// costaria 296 KiB por ventana, es decir, unos 634 MiB por hora de
+    /// audio.
+    ///
+    /// Es el requisito del apartado 8.1 de la fase de inferencia sobre
+    /// audios de duracion arbitraria.
+    fn run_model(&self, windows: &AudioWindows) -> Result<ReconstructedOutput, TranscriptionError> {
+        // El numero de frames que sobreviven se conoce **antes** de inferir:
+        // depende solo de la longitud del audio.
+        let n_frames = expected_frames(windows.original_length(), HOP_SIZE);
+        let mut reconstruccion = ModelUnwrapper::new(n_frames, N_OVERLAPPING_FRAMES);
+
+        for ventana in windows.iter() {
             // El frontend acustico produce la representacion armonica en
             // NCHW: `(1, 8, 172, 264)`.
-            let harmonic = self.model.frontend.forward(&window.samples)?;
-            outputs.push(self.model.forward(&harmonic)?);
+            let armonica = self.model.frontend.forward(&ventana.samples)?;
+            let salida = self.model.forward(&armonica)?;
+            reconstruccion.push(&salida)?;
         }
-        Ok(outputs)
+
+        Ok(reconstruccion.finish()?)
     }
 
     /// Convierte las predicciones en eventos de nota.
     ///
     /// La deteccion polifonica completa se implementa en la Fase 9; aqui se
     /// dejan los parametros y la estructura prepared.
-    fn to_notes(&self, _predictions: &[ModelOutput], _original_length: usize) -> Vec<NoteEvent> {
+    fn to_notes(
+        &self,
+        _predictions: &ReconstructedOutput,
+        _original_length: usize,
+    ) -> Vec<NoteEvent> {
         // La implementacion completa llega en la Fase 9.
         Vec::new()
     }
@@ -160,9 +187,4 @@ impl Transcriber {
 /// Devuelve la longitud del audio original antes del relleno inicial.
 pub fn original_length(resampled_len: usize) -> usize {
     resampled_len.saturating_sub(INITIAL_PADDING)
-}
-
-/// Desplazamiento entre ventanas consecutivas, en muestras.
-pub fn window_hop() -> usize {
-    HOP_SIZE
 }
