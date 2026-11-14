@@ -1,0 +1,84 @@
+{
+  "descripcion": "Las 13 senales controladas del apartado 7.4 de la Fase 7. Se generan con `make_cases.py`.",
+  "nota": "Tienen un timbre conarmonicos (como un piano) porque el modelo oye timbre, no notas: un seno puro se transcribe peor.",
+  "puntos": {
+    "silencio": {
+      "audio": "silencio.wav",
+      "muestras": 44100,
+      "duracion_s": 2.0,
+      "sample_rate": 22050
+    },
+    "nota_sostenida": {
+      "audio": "nota_sostenida.wav",
+      "muestras": 50715,
+      "duracion_s": 2.3,
+      "sample_rate": 22050
+    },
+    "nota_corta": {
+      "audio": "nota_corta.wav",
+      "muestras": 39690,
+      "duracion_s": 1.8,
+      "sample_rate": 22050
+    },
+    "notas_simultaneas": {
+      "audio": "notas_simultaneas.wav",
+      "muestras": 44100,
+      "duracion_s": 2.0,
+      "sample_rate": 22050
+    },
+    "acordes": {
+      "audio": "acordes.wav",
+      "muestras": 56227,
+      "duracion_s": 2.5499773242630384,
+      "sample_rate": 22050
+    },
+    "notas_graves": {
+      "audio": "notas_graves.wav",
+      "muestras": 72765,
+      "duracion_s": 3.3,
+      "sample_rate": 22050
+    },
+    "notas_agudas": {
+      "audio": "notas_agudas.wav",
+      "muestras": 72765,
+      "duracion_s": 3.3,
+      "sample_rate": 22050
+    },
+    "transitorios_rapidos": {
+      "audio": "transitorios_rapidos.wav",
+      "muestras": 50935,
+      "duracion_s": 2.3099773242630386,
+      "sample_rate": 22050
+    },
+    "vibrato": {
+      "audio": "vibrato.wav",
+      "muestras": 57330,
+      "duracion_s": 2.6,
+      "sample_rate": 22050
+    },
+    "deslizamiento": {
+      "audio": "deslizamiento.wav",
+      "muestras": 55125,
+      "duracion_s": 2.5,
+      "sample_rate": 22050
+    },
+    "ruido": {
+      "audio": "ruido.wav",
+      "muestras": 55125,
+      "duracion_s": 2.5,
+      "sample_rate": 22050
+    },
+    "duracion_larga": {
+      "audio": "duracion_larga.wav",
+      "muestras": 655767,
+      "duracion_s": 29.74,
+      "sample_rate": 22050
+    },
+    "limites_ventana": {
+      "audio": "limites_ventana.wav",
+      "muestras": 60419,
+      "duracion_s": 2.7400907029478456,
+      "sample_rate": 22050
+    }
+  }
+}

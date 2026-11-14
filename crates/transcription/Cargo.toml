@@ -12,6 +12,8 @@ basic-pitch-audio-io.workspace = true
 # upstream (pretty_midi define el NoteEvent junto al escritor de MIDI).
 basic-pitch-midi-io.workspace = true
 basic-pitch-audio-preprocess.workspace = true
+# Para las constantes del contrato (bins por semitono, bins de contorno).
+basic-pitch-cqt.workspace = true
 basic-pitch-model.workspace = true
 candle-core.workspace = true
 serde.workspace = true
@@ -21,6 +23,8 @@ tracing.workspace = true
 
 [dev-dependencies]
 # Solo para tests: leer los .npy de la referencia y cargar el modelo.
-basic-pitch-cqt.workspace = true
 basic-pitch-reference-npy.workspace = true
+# Para medir las diferencias con el upstream.
+basic-pitch-validation.workspace = true
+serde_json.workspace = true
 tempfile.workspace = true

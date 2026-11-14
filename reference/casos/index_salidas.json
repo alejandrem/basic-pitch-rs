@@ -1,0 +1,253 @@
+{
+  "descripcion": "Salidas finales del modelo, calculadas por el upstream (basic_pitch.inference.run_inference) sobre los 13 casos.",
+  "nota": "Las notas detectadas estan en <caso>_notas.json.",
+  "puntos": {
+    "acordes": {
+      "note": "acordes_note.npy",
+      "onset": "acordes_onset.npy",
+      "contour": "acordes_contour.npy",
+      "shape_note": [
+        220,
+        88
+      ],
+      "shape_onset": [
+        220,
+        88
+      ],
+      "shape_contour": [
+        220,
+        264
+      ],
+      "notas": "acordes_notas.json",
+      "n_notas": 14
+    },
+    "deslizamiento": {
+      "note": "deslizamiento_note.npy",
+      "onset": "deslizamiento_onset.npy",
+      "contour": "deslizamiento_contour.npy",
+      "shape_note": [
+        216,
+        88
+      ],
+      "shape_onset": [
+        216,
+        88
+      ],
+      "shape_contour": [
+        216,
+        264
+      ],
+      "notas": "deslizamiento_notas.json",
+      "n_notas": 5
+    },
+    "duracion_larga": {
+      "note": "duracion_larga_note.npy",
+      "onset": "duracion_larga_onset.npy",
+      "contour": "duracion_larga_contour.npy",
+      "shape_note": [
+        2574,
+        88
+      ],
+      "shape_onset": [
+        2574,
+        88
+      ],
+      "shape_contour": [
+        2574,
+        264
+      ],
+      "notas": "duracion_larga_notas.json",
+      "n_notas": 63
+    },
+    "limites_ventana": {
+      "note": "limites_ventana_note.npy",
+      "onset": "limites_ventana_onset.npy",
+      "contour": "limites_ventana_contour.npy",
+      "shape_note": [
+        237,
+        88
+      ],
+      "shape_onset": [
+        237,
+        88
+      ],
+      "shape_contour": [
+        237,
+        264
+      ],
+      "notas": "limites_ventana_notas.json",
+      "n_notas": 8
+    },
+    "nota_corta": {
+      "note": "nota_corta_note.npy",
+      "onset": "nota_corta_onset.npy",
+      "contour": "nota_corta_contour.npy",
+      "shape_note": [
+        155,
+        88
+      ],
+      "shape_onset": [
+        155,
+        88
+      ],
+      "shape_contour": [
+        155,
+        264
+      ],
+      "notas": "nota_corta_notas.json",
+      "n_notas": 2
+    },
+    "nota_sostenida": {
+      "note": "nota_sostenida_note.npy",
+      "onset": "nota_sostenida_onset.npy",
+      "contour": "nota_sostenida_contour.npy",
+      "shape_note": [
+        199,
+        88
+      ],
+      "shape_onset": [
+        199,
+        88
+      ],
+      "shape_contour": [
+        199,
+        264
+      ],
+      "notas": "nota_sostenida_notas.json",
+      "n_notas": 2
+    },
+    "notas_agudas": {
+      "note": "notas_agudas_note.npy",
+      "onset": "notas_agudas_onset.npy",
+      "contour": "notas_agudas_contour.npy",
+      "shape_note": [
+        285,
+        88
+      ],
+      "shape_onset": [
+        285,
+        88
+      ],
+      "shape_contour": [
+        285,
+        264
+      ],
+      "notas": "notas_agudas_notas.json",
+      "n_notas": 3
+    },
+    "notas_graves": {
+      "note": "notas_graves_note.npy",
+      "onset": "notas_graves_onset.npy",
+      "contour": "notas_graves_contour.npy",
+      "shape_note": [
+        285,
+        88
+      ],
+      "shape_onset": [
+        285,
+        88
+      ],
+      "shape_contour": [
+        285,
+        264
+      ],
+      "notas": "notas_graves_notas.json",
+      "n_notas": 6
+    },
+    "notas_simultaneas": {
+      "note": "notas_simultaneas_note.npy",
+      "onset": "notas_simultaneas_onset.npy",
+      "contour": "notas_simultaneas_contour.npy",
+      "shape_note": [
+        173,
+        88
+      ],
+      "shape_onset": [
+        173,
+        88
+      ],
+      "shape_contour": [
+        173,
+        264
+      ],
+      "notas": "notas_simultaneas_notas.json",
+      "n_notas": 4
+    },
+    "ruido": {
+      "note": "ruido_note.npy",
+      "onset": "ruido_onset.npy",
+      "contour": "ruido_contour.npy",
+      "shape_note": [
+        216,
+        88
+      ],
+      "shape_onset": [
+        216,
+        88
+      ],
+      "shape_contour": [
+        216,
+        264
+      ],
+      "notas": "ruido_notas.json",
+      "n_notas": 1
+    },
+    "silencio": {
+      "note": "silencio_note.npy",
+      "onset": "silencio_onset.npy",
+      "contour": "silencio_contour.npy",
+      "shape_note": [
+        173,
+        88
+      ],
+      "shape_onset": [
+        173,
+        88
+      ],
+      "shape_contour": [
+        173,
+        264
+      ],
+      "notas": "silencio_notas.json",
+      "n_notas": 2
+    },
+    "transitorios_rapidos": {
+      "note": "transitorios_rapidos_note.npy",
+      "onset": "transitorios_rapidos_onset.npy",
+      "contour": "transitorios_rapidos_contour.npy",
+      "shape_note": [
+        199,
+        88
+      ],
+      "shape_onset": [
+        199,
+        88
+      ],
+      "shape_contour": [
+        199,
+        264
+      ],
+      "notas": "transitorios_rapidos_notas.json",
+      "n_notas": 0
+    },
+    "vibrato": {
+      "note": "vibrato_note.npy",
+      "onset": "vibrato_onset.npy",
+      "contour": "vibrato_contour.npy",
+      "shape_note": [
+        225,
+        88
+      ],
+      "shape_onset": [
+        225,
+        88
+      ],
+      "shape_contour": [
+        225,
+        264
+      ],
+      "notas": "vibrato_notas.json",
+      "n_notas": 2
+    }
+  }
+}
