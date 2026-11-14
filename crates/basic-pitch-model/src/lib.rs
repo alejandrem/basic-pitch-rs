@@ -50,11 +50,13 @@ pub mod layers;
 pub mod model;
 pub mod notes;
 pub mod onsets;
+pub mod trace;
 pub mod weights;
 
 pub use config::ModelConfig;
 pub use frontend::{AcousticFrontend, FrontendError, FrontendStages};
 pub use model::{BasicPitchModel, ModelOutput};
+pub use trace::ModelTrace;
 pub use weights::{Weights, WeightsError};
 
 /// Error del modelo.

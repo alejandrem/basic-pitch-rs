@@ -24,6 +24,7 @@ use candle_core::{DType, Tensor};
 use candle_nn::ops::sigmoid;
 
 use crate::layers::{conv2d_same, same_padding2d};
+use crate::trace::{a_nhwc, ModelTrace};
 use crate::weights::Weights;
 
 /// Nombres canonicos de los pesos de la rama.
@@ -114,12 +115,37 @@ impl ContourBranch {
     /// `FlattenFreqCh`, que en TensorFlow aplana `(batch, 172, 264, 1)` a
     /// `(batch, 172, 264)` conservando el orden frecuencia-principal.
     ///
+    /// Es un atajo de `forward_with_trace` sin traza.
     pub fn forward(&self, x: &Tensor) -> Result<(Tensor, Tensor), candle_core::Error> {
+        self.forward_with_trace(x, &mut None)
+    }
+
+    /// Ejecuta la rama capturando los puntos de inspeccion de la Fase 7.
+    ///
+    /// Es **la misma implementacion** que `forward`: la traza solo recoge
+    /// tensores que ya se han calculado, no cambia el camino de ejecucion ni
+    /// un bit del resultado. No existe una segunda copia de la red que se
+    /// pueda validar por error. Ver `crate::trace`.
+    ///
+    /// `trace` es `None` cuando no se quiere traza, y entonces no se hace
+    /// **ni una copia extra**.
+    pub fn forward_with_trace(
+        &self,
+        x: &Tensor,
+        trace: &mut Option<ModelTrace>,
+    ) -> Result<(Tensor, Tensor), candle_core::Error> {
         // --- conv contour (8, 3x39) ---
         let pad = same_padding2d((172, 264), CONV1_KERNEL, (1, 1));
         let conv1 = conv2d_same(x, &self.conv1_weight, pad, (1, 1))?;
         let conv1 = conv1.broadcast_add(&self.conv1_bias.reshape((1, 8, 1, 1))?)?;
 
+        // Punto de inspeccion `contour_conv`: la salida CRUDA de la
+        // convolucion, **antes** del BatchNorm y del ReLU. En Keras la
+        // conv, la BatchNorm y el ReLU son tres capas distintas, y el
+        // punto de referencia es la de la conv.
+        if let Some(t) = trace.as_mut() {
+            t.contour_conv = Some(a_nhwc(&conv1)?);
+        }
 
         // --- BatchNorm (8 canales) en modo inferencia ---
         let bn = batch_norm(
@@ -140,6 +166,10 @@ impl ContourBranch {
         let reduced = reduced.broadcast_add(&self.reduced_bias.reshape((1, 1, 1, 1))?)?;
         let reduced = sigmoid(&reduced)?;
 
+        // Punto de inspeccion `contour_reduced`.
+        if let Some(t) = trace.as_mut() {
+            t.contour_reduced = Some(a_nhwc(&reduced)?);
+        }
 
         // La salida `contour` es el aplanado de frecuencia y canales:
         // (batch, 1, 172, 264) -> (batch, 172, 264).
@@ -152,6 +182,10 @@ impl ContourBranch {
         // frecuencia, devolviendo (batch, 264, 172).
         let contour = reduced.squeeze(1)?.contiguous()?;
 
+        // Punto de inspeccion `contour`.
+        if let Some(t) = trace.as_mut() {
+            t.contour = Some(contour.clone());
+        }
 
         Ok((contour, reduced))
     }

@@ -26,6 +26,7 @@ use crate::contour::ContourBranch;
 use crate::frontend::AcousticFrontend;
 use crate::notes::NotesBranch;
 use crate::onsets::OnsetBranch;
+use crate::trace::ModelTrace;
 use crate::weights::Weights;
 use crate::ModelError;
 
@@ -112,6 +113,31 @@ impl BasicPitchModel {
     ///
     /// Las tres salidas del modelo: `note`, `onset` y `contour`.
     pub fn forward(&self, harmonic_stacked: &Tensor) -> Result<ModelOutput, ModelError> {
+        self.forward_with_trace(harmonic_stacked, None)
+    }
+
+    /// Ejecuta la red neuronal capturando los puntos de inspeccion de la
+    /// Fase 7.
+    ///
+    /// Es **la misma implementacion** que `forward`: la traza recoge tensores
+    /// que la red ya ha calculado, sin cambiar el camino de ejecucion ni un
+    /// bit del resultado. No existe una segunda copia de la red que se
+    /// pueda validar por error.
+    ///
+    /// Si `trace` es `None`, no se hace **ni una copia extra**: las ramas
+    /// reciben `None` y no capturan nada.
+    ///
+    /// # Traza
+    ///
+    /// ```ignore
+    /// let mut trace = ModelTrace::default();
+    /// let salida = model.forward_with_trace(&harmonic, Some(&mut trace))?;
+    /// ```
+    pub fn forward_with_trace(
+        &self,
+        harmonic_stacked: &Tensor,
+        trace: Option<&mut ModelTrace>,
+    ) -> Result<ModelOutput, ModelError> {
         let dims = harmonic_stacked.dims4()?;
         let expected = (
             self.config.harmonic_stacking.n_output_freqs,
@@ -132,21 +158,49 @@ impl BasicPitchModel {
 
         let harmonic_stacked = harmonic_stacked.to_device(&self.device)?;
 
+        // Las ramas escriben en un `Option<ModelTrace>` propio. Si el
+        // llamante quiere la traza, se crea vacia y se le vuelca al
+        // final; si no, las ramas reciben `None` y no hacen **ni una
+        // copia extra**.
+        let mut destino: Option<ModelTrace> = if trace.is_some() {
+            Some(ModelTrace::default())
+        } else {
+            None
+        };
+
         // --- Rama de contornos ---
         // (batch, 8, 172, 264) -> contour (batch, 172, 264)
         //                       -> x_contours_reduced (batch, 1, 172, 264)
-        let (contour, x_contours_reduced) = self.contour.forward(&harmonic_stacked)?;
+        let (contour, x_contours_reduced) = self
+            .contour
+            .forward_with_trace(&harmonic_stacked, &mut destino)?;
 
         // --- Rama de notas ---
         // (batch, 1, 172, 264) -> note (batch, 172, 88)
         //                       -> x_notes_pre (batch, 1, 172, 88)
-        let (note, x_notes_pre) = self.notes.forward(&x_contours_reduced)?;
+        let (note, x_notes_pre) = self
+            .notes
+            .forward_with_trace(&x_contours_reduced, &mut destino)?;
 
         // --- Rama de onsets ---
         // (batch, 8, 172, 264) + (batch, 1, 172, 88)
         //   -> concat en canales -> (batch, 33, 172, 88)
         //   -> onset (batch, 172, 88)
-        let onset = self.onsets.forward(&harmonic_stacked, &x_notes_pre)?;
+        let onset =
+            self.onsets
+                .forward_with_trace(&harmonic_stacked, &x_notes_pre, &mut destino)?;
+
+        // Volcado de la traza al llamante. Los tensores se mueven, no se
+        // copian.
+        if let (Some(destino), Some(t)) = (destino, trace) {
+            t.contour_conv = destino.contour_conv;
+            t.contour_reduced = destino.contour_reduced;
+            t.contour = destino.contour;
+            t.notes_features = destino.notes_features;
+            t.note = destino.note;
+            t.onset_features = destino.onset_features;
+            t.onset = destino.onset;
+        }
 
         Ok(ModelOutput {
             note,

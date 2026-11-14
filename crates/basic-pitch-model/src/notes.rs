@@ -17,6 +17,7 @@ use candle_core::Tensor;
 use candle_nn::ops::sigmoid;
 
 use crate::layers::{conv2d_same, same_padding2d};
+use crate::trace::{a_nhwc, ModelTrace};
 use crate::weights::Weights;
 
 /// Nombres canonicos de los pesos de la rama.
@@ -86,11 +87,34 @@ impl NotesBranch {
     /// `x_notes_pre` es la salida **sigmoid** de la conv de notas, y es la
     /// que se concatena con la rama de onsets (33 canales en total).
     pub fn forward(&self, x: &Tensor) -> Result<(Tensor, Tensor), candle_core::Error> {
+        self.forward_with_trace(x, &mut None)
+    }
+
+    /// Ejecuta la rama capturando los puntos de inspeccion de la Fase 7.
+    ///
+    /// Es **la misma implementacion** que `forward`: la traza solo recoge
+    /// tensores que ya se han calculado, no cambia el camino de ejecucion ni
+    /// un bit del resultado. No existe una segunda copia de la red que se
+    /// pueda validar por error. Ver `crate::trace`.
+    ///
+    /// `trace` es `None` cuando no se quiere traza, y entonces no se hace
+    /// **ni una copia extra**.
+    pub fn forward_with_trace(
+        &self,
+        x: &Tensor,
+        trace: &mut Option<ModelTrace>,
+    ) -> Result<(Tensor, Tensor), candle_core::Error> {
         // --- conv notes1 (32, 7x7, stride 1x3) ---
         let pad = same_padding2d((172, 264), CONV1_KERNEL, CONV1_STRIDE);
         let conv1 = conv2d_same(x, &self.conv1_weight, pad, CONV1_STRIDE)?;
         let conv1 = conv1.broadcast_add(&self.conv1_bias.reshape((1, 32, 1, 1))?)?;
 
+        // Punto de inspeccion `notes_features`: la salida CRUDA de la
+        // conv, **antes** del ReLU. En Keras la conv y el ReLU son capas
+        // distintas, y el punto de referencia es el de la conv.
+        if let Some(t) = trace.as_mut() {
+            t.notes_features = Some(a_nhwc(&conv1)?);
+        }
 
         // --- ReLU (esta rama NO tiene BatchNorm) ---
         let conv1 = conv1.relu()?;
@@ -110,6 +134,10 @@ impl NotesBranch {
         // `transpose(1, 2)` de mas devolveria (batch, 88, 172).
         let note = conv2.squeeze(1)?.contiguous()?;
 
+        // Punto de inspeccion `note`.
+        if let Some(t) = trace.as_mut() {
+            t.note = Some(note.clone());
+        }
 
         Ok((note, conv2))
     }
