@@ -69,6 +69,13 @@ fase.
   ----------------------------------------------------------------------------------------
   Archivo                                              Uso
   ---------------------------------------------------- -----------------------------------
+  `docs/estado-p1.md`                                  Estado del bloque P1 (Fases 0, 1 y 2) y
+                                                       cómo reproducirlo.
+
+  `docs/estado-p2.md`                                  Estado del bloque P2 (Fases 3, 4 y 5):
+                                                       frontend acústico, resultados medidos
+                                                       contra la referencia y trampas para P3.
+
   `docs/teoria/fase-01-objetivo.md`                    Consultar el propósito, alcance y
                                                        límites del proyecto.
 
@@ -86,6 +93,19 @@ fase.
 > Si la ubicación real de `fase-19-documentacion.md` difiere de `docs/`,
 > localízalo por nombre dentro de `docs/`; no inventes una ruta
 > alternativa.
+
+## Puntos de entrada del código
+
+| Qué buscas | Dónde está |
+| --- | --- |
+| La CQT multirresolución | `crates/cqt/src/transform.rs` |
+| `NormalizedLog` | `crates/cqt/src/normalization.rs` |
+| La BatchNorm inicial | `crates/cqt/src/batch_norm.rs` |
+| La composición del frontend | `crates/basic-pitch-model/src/frontend.rs` |
+| Harmonic Stacking | `crates/basic-pitch-model/src/harmonic_stacking.rs` |
+| La red neuronal | `crates/basic-pitch-model/src/{contour,notes,onsets}.rs` |
+| El validador contra la referencia | `cargo run --example validar_frontend -p basic-pitch-model` |
+| El oráculo (`.npy` de TensorFlow) | `reference/reference_outputs/` |
 
 ## Cómo encontrar una sección
 
