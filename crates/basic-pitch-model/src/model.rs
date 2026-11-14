@@ -18,10 +18,12 @@
 //! La implementacion del frontend acustico llega en la Fase 4 (P2). Este
 //! modulo solo cubre la parte neuronal.
 
+use basic_pitch_cqt::CqtKernels;
 use candle_core::{Device, Tensor};
 
 use crate::config::ModelConfig;
 use crate::contour::ContourBranch;
+use crate::frontend::AcousticFrontend;
 use crate::notes::NotesBranch;
 use crate::onsets::OnsetBranch;
 use crate::weights::Weights;
@@ -55,6 +57,8 @@ pub struct ModelOutput {
 pub struct BasicPitchModel {
     /// Configuracion tecnica del modelo.
     pub config: ModelConfig,
+    /// Frontend acustico: de audio a representacion armonica.
+    pub frontend: AcousticFrontend,
     /// Rama de contornos.
     pub contour: ContourBranch,
     /// Rama de notas.
@@ -66,14 +70,21 @@ pub struct BasicPitchModel {
 }
 
 impl BasicPitchModel {
-    /// Construye el modelo a partir de la configuracion y los pesos.
-    pub fn new(config: ModelConfig, weights: Weights) -> Result<Self, ModelError> {
+    /// Construye el modelo a partir de la configuracion, los pesos y los
+    /// kernels de la CQT.
+    pub fn new(
+        config: ModelConfig,
+        weights: Weights,
+        kernels: CqtKernels,
+    ) -> Result<Self, ModelError> {
         config.validate().map_err(ModelError::Config)?;
+        let frontend = AcousticFrontend::new(kernels, &config, &weights)?;
         Ok(Self {
             contour: ContourBranch::from_weights(&weights)?,
             notes: NotesBranch::from_weights(&weights)?,
             onsets: OnsetBranch::from_weights(&weights)?,
             config,
+            frontend,
             device: Device::Cpu,
         })
     }

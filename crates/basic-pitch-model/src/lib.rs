@@ -44,6 +44,7 @@ use std::path::Path;
 
 pub mod config;
 pub mod contour;
+pub mod frontend;
 pub mod harmonic_stacking;
 pub mod layers;
 pub mod model;
@@ -52,6 +53,7 @@ pub mod onsets;
 pub mod weights;
 
 pub use config::ModelConfig;
+pub use frontend::{AcousticFrontend, FrontendError, FrontendStages};
 pub use model::{BasicPitchModel, ModelOutput};
 pub use weights::{Weights, WeightsError};
 
@@ -60,20 +62,63 @@ pub use weights::{Weights, WeightsError};
 pub enum ModelError {
     /// Error al cargar los pesos.
     #[error("error al cargar los pesos: {0}")]
-    Weights(#[from] WeightsError),
+    Weights(#[source] Box<WeightsError>),
 
     /// Error de Candle durante la inferencia.
+    ///
+    /// Va encuadrada (`Box`) a proposito: `candle_core::Error` es grande, y
+    /// sin el `Box` el enum entero ocuparia mas de 128 bytes, con lo que
+    /// cada `Result` que lo devuelve copia mas datos de los necesarios.
     #[error("error de Candle en el modelo: {0}")]
-    Candle(#[from] candle_core::Error),
+    Candle(#[source] Box<candle_core::Error>),
 
     /// Error de la configuracion del modelo.
     #[error("configuracion invalida: {0}")]
     Config(String),
+
+    /// Error del frontend acustico.
+    #[error("error en el frontend acustico: {0}")]
+    Frontend(#[source] Box<FrontendError>),
+
+    /// Error al cargar los kernels de la CQT.
+    #[error("error al cargar los kernels de la CQT: {0}")]
+    Kernels(#[source] Box<basic_pitch_cqt::KernelsError>),
+}
+
+impl From<candle_core::Error> for ModelError {
+    fn from(error: candle_core::Error) -> Self {
+        ModelError::Candle(Box::new(error))
+    }
+}
+
+impl From<WeightsError> for ModelError {
+    fn from(error: WeightsError) -> Self {
+        ModelError::Weights(Box::new(error))
+    }
+}
+
+impl From<FrontendError> for ModelError {
+    fn from(error: FrontendError) -> Self {
+        ModelError::Frontend(Box::new(error))
+    }
+}
+
+impl From<basic_pitch_cqt::KernelsError> for ModelError {
+    fn from(error: basic_pitch_cqt::KernelsError) -> Self {
+        ModelError::Kernels(Box::new(error))
+    }
 }
 
 /// Carga un modelo completo desde su directorio.
+///
+/// Espera en ese directorio:
+///
+/// - `model_config.json`: el contrato tecnico.
+/// - `model.safetensors`: los 24 tensores del modelo.
+/// - `cqt_kernels.safetensors`: los 5 tensores deterministas de la CQT.
 pub fn load_model(dir: &Path) -> Result<BasicPitchModel, ModelError> {
     let config = ModelConfig::load(&dir.join("model_config.json")).map_err(ModelError::Config)?;
     let weights = Weights::load(&dir.join("model.safetensors"))?;
-    BasicPitchModel::new(config, weights)
+    let kernels = basic_pitch_cqt::CqtKernels::load(&dir.join("cqt_kernels.safetensors"))?;
+    BasicPitchModel::new(config, weights, kernels)
 }

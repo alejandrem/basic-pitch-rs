@@ -23,8 +23,16 @@ pub enum TranscriptionError {
     Resample(#[from] basic_pitch_audio_preprocess::ResampleError),
 
     /// Error del modelo.
+    ///
+    /// Las variantes grandes van encuadradas (`Box`) para que el enum no
+    /// ocupe mas de lo necesario en cada `Result` que lo devuelve.
     #[error("error del modelo: {0}")]
-    Model(#[from] basic_pitch_model::ModelError),
+    Model(#[source] Box<basic_pitch_model::ModelError>),
+
+    /// Error del frontend acustico (CQT, NormalizedLog, BatchNorm o
+    /// Harmonic Stacking).
+    #[error("error del frontend acustico: {0}")]
+    Frontend(#[source] Box<basic_pitch_model::FrontendError>),
 
     /// Error de Candle.
     #[error("error de Candle: {0}")]
@@ -37,6 +45,18 @@ pub enum TranscriptionError {
     /// Error al escribir la salida.
     #[error("error de salida: {0}")]
     Io(#[from] std::io::Error),
+}
+
+impl From<basic_pitch_model::ModelError> for TranscriptionError {
+    fn from(error: basic_pitch_model::ModelError) -> Self {
+        TranscriptionError::Model(Box::new(error))
+    }
+}
+
+impl From<basic_pitch_model::FrontendError> for TranscriptionError {
+    fn from(error: basic_pitch_model::FrontendError) -> Self {
+        TranscriptionError::Frontend(Box::new(error))
+    }
 }
 
 /// El resultado de una transcripcion.
@@ -106,24 +126,25 @@ impl Transcriber {
 
     /// Ejecuta el modelo sobre cada ventana y concatena las predicciones.
     ///
-    /// # Pendiente (Fase 4 / P2)
+    /// Cada ventana pasa por el frontend acustico completo:
     ///
-    /// La red neuronal `BasicPitchModel::forward` recibe la **representacion
-    /// armonica**, no el audio: el frontend acustico (CQT -> NormalizedLog ->
-    /// BatchNorm inicial -> Harmonic Stacking) debe ejecutarse antes. Ese
-    /// frontend todavia no esta implementado, asi que aqui solo se deja
-    /// constancia del contrato.
-    fn run_model(&self, _windows: &AudioWindows) -> Result<Vec<ModelOutput>, TranscriptionError> {
-        // Cuando exista el frontend acustico, este es el sitio:
-        //
-        //   let cqt          = cqt::transform(&window.samples, &kernels)?;
-        //   let normalized   = cqt::normalized_log(&cqt)?;
-        //   let batch_normed = batch_norm(&normalized, &input_bn_params)?;
-        //   let harmonic     = harmonic_stacking(&batch_normed, &harmonics, 3, 264)?;
-        //   let output       = self.model.forward(&harmonic)?;
-        //
-        // Todo en NCHW: `harmonic` es `(1, 8, 172, 264)`.
-        Ok(Vec::new())
+    /// ```text
+    /// audio (43844)
+    ///   -> CQT              (1, 172, 309)
+    ///   -> NormalizedLog    (1, 172, 309)
+    ///   -> BatchNorm inicial(1, 172, 309)
+    ///   -> HarmonicStacking (1, 8, 172, 264)   NCHW
+    ///   -> BasicPitchModel::forward(...)        -> note, onset, contour
+    /// ```
+    fn run_model(&self, windows: &AudioWindows) -> Result<Vec<ModelOutput>, TranscriptionError> {
+        let mut outputs = Vec::with_capacity(windows.len());
+        for window in windows.iter() {
+            // El frontend acustico produce la representacion armonica en
+            // NCHW: `(1, 8, 172, 264)`.
+            let harmonic = self.model.frontend.forward(&window.samples)?;
+            outputs.push(self.model.forward(&harmonic)?);
+        }
+        Ok(outputs)
     }
 
     /// Convierte las predicciones en eventos de nota.

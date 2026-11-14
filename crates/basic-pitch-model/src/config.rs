@@ -347,13 +347,12 @@ impl ModelConfig {
         }
         Ok(())
     }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn config_de_ejemplo() -> ModelConfig {
+    /// Configuracion de ejemplo: los mismos valores que el asset
+    /// `models/basic-pitch/icassp-2022/model_config.json`.
+    ///
+    /// Sirve para tests y para comprobar invariantes sin depender del
+    /// sistema de archivos.
+    pub fn example() -> ModelConfig {
         ModelConfig {
             model: ModelIdentity {
                 name: "basic-pitch".into(),
@@ -518,36 +517,41 @@ mod tests {
             },
         }
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
 
     #[test]
     fn una_configuracion_correcta_se_valida() {
-        assert!(config_de_ejemplo().validate().is_ok());
+        assert!(ModelConfig::example().validate().is_ok());
     }
 
     #[test]
     fn se_rechazan_264_bins_de_cqt() {
-        let mut config = config_de_ejemplo();
+        let mut config = ModelConfig::example();
         config.frequency.cqt_n_bins = 264;
         assert!(config.validate().is_err());
     }
 
     #[test]
     fn se_rechazan_32_canales_de_concatenacion() {
-        let mut config = config_de_ejemplo();
+        let mut config = ModelConfig::example();
         config.concat.channels = 32;
         assert!(config.validate().is_err());
     }
 
     #[test]
     fn se_rechaza_el_orden_invertido_de_la_concatenacion() {
-        let mut config = config_de_ejemplo();
+        let mut config = ModelConfig::example();
         config.concat.order = vec!["x_onset".into(), "x_notes_pre".into()];
         assert!(config.validate().is_err());
     }
 
     #[test]
     fn se_rechaza_un_epsilon_distinto_de_keras() {
-        let mut config = config_de_ejemplo();
+        let mut config = ModelConfig::example();
         config.batch_norm.epsilon = 1e-5;
         assert!(config.validate().is_err());
     }
@@ -556,7 +560,7 @@ mod tests {
     fn se_rechaza_la_capa_5x5_comentada_de_la_rama_de_contornos() {
         // CONTOUR_KERNEL_SIZE_1: 32 filtros, kernel (5, 5), en la rama de
         // contornos. Esta comentada en el upstream y no debe existir.
-        let mut config = config_de_ejemplo();
+        let mut config = ModelConfig::example();
         config.layers.push(LayerConfig {
             name: "conv2d_comentado".into(),
             rust_name: "contour.comentado".into(),
@@ -578,7 +582,7 @@ mod tests {
     fn la_capa_de_onsets_con_kernel_5x5_si_es_valida() {
         // ONSET_KERNEL_SIZE_1 tambien tiene kernel (5, 5), pero es ACTIVA:
         // la invariante no debe confundirla con la comentada.
-        let config = config_de_ejemplo();
+        let config = ModelConfig::example();
         assert!(config.validate().is_ok());
         assert!(config
             .layers
