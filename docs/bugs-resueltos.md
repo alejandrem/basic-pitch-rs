@@ -793,13 +793,15 @@ mirar la operacion es un error facil de cometer.
 
 | Bloque | Categoria | Cantidad | De ellos silenciosos |
 |---|---|---:|---:|
-| P1 | Errores del plan (documentales) | 7 | 6 |
-| P1 | Bugs del codigo | 12 | 4 |
-| P1 | Diferencias de API entre versiones | 1 (8 casos) | - |
-| P2 | Trampas de la referencia (documentales) | 4 | 3 |
-| P2 | Bugs del codigo | 8 | 2 |
-| P2 | Bugs de la auditoria (A1, A2, A3) | 3 | 2 |
-| **Total** | | **35** | **17** |
+| P1 | Errores del plan (documentales), B-01..B-07 | 7 | 6 |
+| P1 | Bugs del codigo, B-08..B-19 | 12 | 4 |
+| P2 | Trampas de la referencia (documentales), B-20..B-23 | 4 | 3 |
+| P2 | Bugs del codigo, B-24..B-31 | 8 | 2 |
+| P2 | Bugs de la auditoria del codigo, B-32..B-34 | 3 | 2 |
+| **Total** | | **34** | **17** |
+
+La diferencia de API entre versiones (B-18) son ocho casos de un mismo
+problema, no ocho entradas.
 
 Ademas, dos entradas documentan **huecos de cobertura** que no eran
 fallos: B-31 (la matriz de pruebas de la fase 3 estaba casi vacia) y
@@ -815,7 +817,7 @@ Eso es el argumento de por que una auditoria manual del codigo tiene su
 sitio al lado de los tests: un test compara lo que se le dice que
 compara, y no puede comparar lo que nadie se le ocurre comprobar.
 
-**Los 14 silenciosos** (el programa no falla, devuelve numeros
+**Los 17 silenciosos** (el programa no falla, devuelve numeros
 plausibles) son los que justifican la validacion etapa a etapa contra
 `reference/reference_outputs/`, en lugar de comparar solo el MIDI final,
 que oculta donde se ha acumulado el error.

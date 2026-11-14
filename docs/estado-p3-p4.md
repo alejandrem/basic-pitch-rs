@@ -13,9 +13,10 @@ neuronal, la reconstrucción temporal y la detección de notas.
 | 4 · Frontend CQT | CQT multirresolución, `NormalizedLog`, BatchNorm inicial | TensorFlow: CQT a 5.7e-6 (epsilon de `float32`) |
 | 5 · Harmonic Stacking | Los 8 desplazamientos, con relleno asimétrico | TensorFlow: 3.4e-3 |
 | 6 · Red neuronal | Las 6 capas activas, `padding="same"` emulado, concat de 33 canales | TensorFlow: 4.4e-5 / 1.7e-5 / 5.3e-5 |
-| 7 · Validación | Los 7 puntos de inspección de la red, con su traza | TensorFlow, punto a punto |
+| 7 · Validación | Las 11 etapas del pipeline, con su traza y las 6 métricas | TensorFlow, punto a punto |
 | 8 · Duración arbitraria | Reconstrucción temporal, flujo por lotes | `unwrap_output` del upstream, de extremo a extremo |
 | 9 · Posprocesamiento | Detección polifónica, onsets inferidos, Melodia Trick | `output_to_notes_polyphonic` del upstream: **0 desajustes** |
+| 7 · 13 casos | Señales controladas: silencio, nota corta, acordes, vibrato, glissando, ruido, 30 s, límites de ventana... | Los 13, nota a nota contra el upstream |
 
 La cadena completa, de un archivo de audio a un MIDI:
 
@@ -106,7 +107,7 @@ cargo fmt --all -- --check
 ## Estado del repositorio
 
 ```text
-tests:   168 en verde
+tests:   174 en verde
 clippy:  0 avisos
 fmt:     sin diferencias
 ```
@@ -140,7 +141,7 @@ fmt:     sin diferencias
 
 | Fase | Contenido |
 |---|---|
-| 10 · Pitch bend | Estimar el bend a partir del contour y escribirlo en el MIDI |
+| 10 · Pitch bend | El cálculo **ya está escrito y probado** (`crates/transcription/src/pitch_bend.rs`), pero **no está conectado**: el campo `pitch_bend` del evento se rellena con `None`. Falta el cableado |
 | 11 · MIDI | Pulir el escritor (pitch bend por canal, tempo, metadatos) |
 | 12 · API | Biblioteca pública, configuración por comando, API de Rust |
 | 13 · Tests | Suite de integración, regresión y CI |

@@ -58,6 +58,9 @@ ONNX oficial.
 | 11 | El relleno de la CQT es **reflectante** (no repite el borde) y el submuestreo usa relleno de ceros manual de 127 muestras | [fase-08](práctica/fase-08-frontend-cqt.md), [bugs-resueltos](bugs-resueltos.md) |
 | 12 | El `NormalizedLog` amplifica el ruido del CQT ~2819 veces en los bins silenciosos: el error grande está explicado, no es un bug | [fase-08](práctica/fase-08-frontend-cqt.md), [bugs-resueltos](bugs-resueltos.md) |
 | 13 | **Symphonia y `soundfile` producen la misma señal** (diferencia < epsilon de `float32`): la incertidumbre declarada en la corrección 5 queda resuelta con medición | [fase-07](práctica/fase-07-procesamiento-audio.md), [bugs-resueltos](bugs-resueltos.md) |
+| 14 | Los pesos se cargan como **tensores planos**, no con `VarBuilder`: es la herramienta de entrenamiento, y aquí solo hay inferencia | [fase-10](práctica/fase-10-arquitectura-neuronal.md) |
+| 15 | Las seis métricas de la Fase 7 (MAE, MSE, RMSE, máximo, diferencia relativa y **similitud coseno**) viven en un crate compartido, para que los validadores y los tests usen la misma aritmética | [fase-11](práctica/fase-11-validacion-equivalencia.md) |
+| 16 | Los **13 casos de prueba** del apartado 7.4 se generan con señales controladas y se validan contra el upstream | [fase-11](práctica/fase-11-validacion-equivalencia.md) |
 
 
 ---
@@ -68,9 +71,16 @@ ONNX oficial.
 | --- | --- | --- | --- | --- |
 | **P1** (0 + 1 + 2) | Auditoría + pesos + workspace. Todo mecánico, todo con el modelo y el código ya en disco. Deja listo el oráculo de referencia. | Bajo | **Cerrado** ([estado](estado-p1.md)) |
 | **P2** (3 + 4 + 5) | Audio → CQT → NormalizedLog → BN → HarmonicStacking. El bloque numérico difícil. Con kernels extraídos del ONNX es viable en un prompt. | Alto | **Cerrado** ([estado](estado-p2.md)) |
-| **P3** (6 + 7+ 8) | Red Candle + validación de equivalencia etapa por etapa. | Medio | Pendiente |
-| **P4** ( + 9 + 10 + 11) | Ventanas/reconstrucción → notas → pitch bend → MIDI. Es port de numpy casi 1:1. | Bajo | Pendiente |
+| **P3** (6 + 7) | Red Candle + validación de equivalencia etapa por etapa. | Medio | **Cerrado** ([estado](estado-p3-p4.md)) |
+| **P4** (8 + 9 + 10 + 11) | Ventanas/reconstrucción → notas → pitch bend → MIDI. Es port de numpy casi 1:1. | Bajo | **A medias**: 8, 9 y 11 hechas; **10 (pitch bend) sin integrar** ([estado](estado-p3-p4.md)) |
 | **P5** (12 + 13 + 14 + 15) | API + tests + CI + perf + docs. | Bajo | Pendiente |
+
+**Nota sobre la numeración de los ficheros.** Los ficheros `docs/` van del
+`fase-01` al `fase-19`, y cada uno corresponde a una fase del plan (0 a
+15). El bloque P3 son los ficheros `fase-10` (red neuronal) y `fase-11`
+(validación de equivalencia); el bloque P4, los ficheros `fase-12`
+(duración arbitraria), `fase-13` (posprocesamiento), `fase-14` (pitch
+bend) y `fase-15` (exportación MIDI).
 
 
 # Resultado esperado

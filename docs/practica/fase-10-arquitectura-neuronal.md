@@ -105,6 +105,40 @@ La equivalencia **debe comprobarse numéricamente** en la Fase 7 con las
 métricas allí definidas (MAE, RMSE, similitud coseno). No se debe declarar
 "equivalente" sin esa medición, ni asumir igualdad exacta.
 
+
+### 6.1.2. Corrección: los pesos se cargan como tensores planos, no con `VarBuilder`
+
+La fase 6.2 dice "La construcción del modelo recibirá los pesos mediante
+`VarBuilder`" y 6.7 pide "Construir el `VarBuilder`".
+
+**No se usa `VarBuilder`**, y la razón es que es la herramienta equivocada
+para inferencia:
+
+| | `VarBuilder` | tensores planos |
+|---|---|---|
+| Para qué | entrenar: crear variables con gradientes | inferir: pesos fijos |
+| Qué añade | un grafo de autograd, un optimizador, `set_`/`get` por tensor | nada: el tensor ya está listo |
+| Coste | una indirección por peso | acceso directo |
+
+El modelo es **inferencia pura**: los pesos no se entrenan, no hay
+gradientes y no hay optimizador. `VarBuilder` solo aportaría ruido.
+
+Lo que **sí** hace el código es lo que la fase 6.7 pide en el resto de
+sus puntos:
+
+- abrir el archivo Safetensors,
+- comprobar la **existencia** de cada tensor esperado,
+- comprobar sus **dimensiones** exactamente (y no "aproximadamente": si
+  un kernel no tiene la forma que dice el contrato, el programa falla al
+  arrancar, con un mensaje que dice cuál),
+- asociar cada peso a su operación,
+- mantener las estadísticas de BatchNorm (que son tensores mas, no
+  parámetros entrenables),
+- detectar parámetros **faltantes** o **incompatibles**.
+
+Además, el contrato se valida por separado (`ModelConfig::validate`),
+que es donde se comprueban los 48 valores del modelo.
+
 ## 6.2. Estructura del modelo
 
 Se recomienda definir una estructura principal:
