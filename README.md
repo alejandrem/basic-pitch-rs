@@ -193,13 +193,24 @@ basic-pitch transcribe cancion.mp3 -o limpio.mid --frame-threshold 0.4
 
 ### Comprobar la fidelidad
 
-El motor se compara nota a nota con la implementación original:
+El motor se compara **etapa a etapa** con la implementación original: las
+once etapas del pipeline (las cuatro del frontend y las siete de la red),
+con seis métricas (MAE, MSE, RMSE, máximo, diferencia relativa y
+similitud coseno).
 
 ```bash
-# Las notas del upstream, sobre un audio.
-.venv/bin/python tools/weight-export/reference_notes.py cancion.mp3
+# El validador: mide las once etapas y escribe el informe.
+cargo run --release --example validar_model -p basic-pitch-model
+# -> reference/validation_results.json
 
-# La validación completa.
+# Los 13 casos de prueba de la Fase 7 (señal controlada contra el upstream).
+cargo test --release -p basic-pitch-transcription --test casos -- --ignored
+```
+
+Las notas, nota a nota contra el upstream:
+
+```bash
+.venv/bin/python tools/weight-export/reference_notes.py cancion.mp3
 cargo test --release -p basic-pitch-transcription --test notes_reference
 ```
 
