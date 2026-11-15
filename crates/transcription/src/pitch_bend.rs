@@ -1,14 +1,14 @@
 //! Estimacion de pitch bend a partir de los contornos de frecuencia.
 //!
-//! # ESTA FASE 10, AUN NO INTEGRADA
+//! # Que hace
 //!
-//! El calculo de pitch bend esta implementado y probado, pero **todavia no
-//! se usa**: falta conectarlo con la deteccion de notas, que es lo que
-//! haria que el MIDI llevara los bends. El campo `pitch_bend` del evento
-//! musical existe, pero se rellena con `None`.
+//! Estima, para cada nota detectada, como se mueve la afinacion DENTRO de
+//! ella, usando la salida de contornos (que tiene tres bins por semitono).
 //!
-//! No es codigo basura: es la Fase 10 escrita por adelantado, con la
-//! formula del upstream. Lo que falta es el cableado, no el calculo.
+//! Los desplazamientos se devuelven en unidades de **1/3 de semitono**,
+//! que es lo que hace el upstream en `get_pitch_bends`. La conversion a
+//! ticks de MIDI ocurre al escribir el fichero, en el crate `midi-io`,
+//! que es donde la hace el upstream tambien (`note_events_to_midi`).
 //!
 //! # Conversion de nota MIDI a indice de contorno
 //!
@@ -149,35 +149,46 @@ impl PitchBendEstimator {
         let window_length = (tolerance * 2 + 1) as usize;
         let gaussian = gaussian_window(window_length, GAUSSIAN_STD);
 
-        // Recorte de la gaussiana cuando la nota esta en un borde.
+        // Y se recorta por los dos lados, igual que el upstream:
+        //
+        //   freq_gaussian[max(0, tol - freq_idx) :
+        //                  window_length - max(0, freq_idx - (N - tol - 1))]
+        //
+        // El recorte importa: sin el, una nota muy aguda (cerca del final
+        // de la matriz de contornos) usaria la cola equivocada de la
+        // gaussiana y daria un bin desplazado.
         let left_cut = (tolerance - freq_idx).max(0) as usize;
         let right_cut = (freq_idx - (N_FREQ_BINS_CONTOURS as i64 - tolerance - 1)).max(0) as usize;
+        let gaussiana = &gaussian[left_cut..window_length - right_cut];
+
+        // El desplazamiento del indice de la region respecto al bin de la nota.
         let pb_shift = tolerance - (tolerance - freq_idx).max(0);
 
-        let mut bends = Vec::new();
-        for row in contours.iter().take(end_idx).skip(start_idx) {
-            let mut best_bin = 0usize;
-            let mut best_value = f32::NEG_INFINITY;
-            let mut any = false;
+        // La submatriz tiene `freq_end - freq_start` columnas y la
+        // gaussiana recortada tiene exactamente los mismos elementos
+        // (comprobado: coinciden siempre, tambien en los bordes).
+        debug_assert_eq!(gaussiana.len(), freq_end - freq_start);
 
-            for (offset, bin) in (freq_start..freq_end).enumerate() {
-                let gaussian_index = left_cut + offset;
-                if gaussian_index >= gaussian.len() {
-                    break;
-                }
-                let value = row.get(bin).copied().unwrap_or(0.0) * gaussian[gaussian_index];
-                if !any || value > best_value {
-                    best_value = value;
-                    best_bin = offset;
-                    any = true;
+        let mut bends = Vec::with_capacity(end_idx - start_idx);
+        for row in contours.iter().take(end_idx).skip(start_idx) {
+            // El maximo de la fila ponderada. `np.argmax` devuelve el
+            // PRIMER maximo, asi que los empates se resuelven igual que
+            // en NumPy (comparacion estricta).
+            let mut mejor_indice = 0usize;
+            let mut mejor_valor = f32::NEG_INFINITY;
+            for (offset, peso) in gaussiana.iter().enumerate() {
+                let valor = row.get(freq_start + offset).copied().unwrap_or(0.0) * peso;
+                if offset == 0 || valor > mejor_valor {
+                    mejor_valor = valor;
+                    mejor_indice = offset;
                 }
             }
 
-            let shift = best_bin as i64 - pb_shift;
+            // En unidades de 1/3 de semitono, respecto al bin de la nota.
+            let shift = mejor_indice as i64 - pb_shift;
             bends.push(shift as i16);
         }
 
-        let _ = right_cut;
         bends
     }
 }

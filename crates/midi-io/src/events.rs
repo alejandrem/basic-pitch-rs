@@ -37,7 +37,11 @@ pub struct NoteEvent {
     /// La velocidad es su proyeccion; se conserva para no perder
     /// informacion en el camino de ida y vuelta.
     pub amplitude: f32,
-    /// Secuencia de pitch bend, en unidades de 1/3 de semitono.
+    /// Secuencia de pitch bend, en unidades de **1/3 de semitono**.
+    ///
+    /// Es la misma unidad que usa el upstream en `get_pitch_bends`. La
+    /// conversion a ticks de MIDI ocurre al escribir el fichero, que es
+    /// donde la hace el upstream tambien.
     ///
     /// `None` si la nota no tiene bends.
     pub pitch_bend: Option<Vec<i16>>,

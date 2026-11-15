@@ -8,8 +8,10 @@ use basic_pitch_audio_preprocess::{
     INITIAL_PADDING,
 };
 use basic_pitch_model::BasicPitchModel;
+use candle_core::Tensor;
 
 use crate::note_detection::{output_to_notes_polyphonic, NoteEvent, N_NOTES};
+use crate::pitch_bend::PitchBendEstimator;
 use crate::stitching::{
     expected_frames, frame_to_time, ModelUnwrapper, ReconstructedOutput, N_OVERLAPPING_FRAMES,
 };
@@ -186,10 +188,18 @@ impl Transcriber {
         _original_length: usize,
     ) -> Vec<NoteEvent> {
         let n_freqs = N_NOTES;
-        let frames = predictions.note.flatten_all().expect("aplanar");
-        let onsets = predictions.onset.flatten_all().expect("aplanar");
-        let frames = frames.to_vec1::<f32>().expect("float32");
-        let onsets = onsets.to_vec1::<f32>().expect("float32");
+        let frames = predictions
+            .note
+            .flatten_all()
+            .expect("aplanar")
+            .to_vec1::<f32>()
+            .expect("float32");
+        let onsets = predictions
+            .onset
+            .flatten_all()
+            .expect("aplanar")
+            .to_vec1::<f32>()
+            .expect("float32");
         let n_frames = frames.len() / n_freqs;
 
         let notas = output_to_notes_polyphonic(
@@ -200,26 +210,71 @@ impl Transcriber {
             &self.config.note_detection,
         );
 
-        // Los frames se convierten a tiempo con la conversion del upstream,
-        // que incluye el desplazamiento por ventana (y su inconsistencia
-        // 172/142, que hay que conservar).
-        notas
+        // --- El pitch bend (Fase 10) ---
+        //
+        // La salida de contornos tiene tres bins por semitono, con lo que
+        // se puede estimar como se mueve la afinacion DENTRO de una nota.
+        //
+        // El estimador trabaja con la matriz de contornos por FILAS (una
+        // por frame), asi que se construye desde la salida reconstruida.
+        let contornos = a_filas(&predictions.contour, basic_pitch_cqt::N_FREQ_BINS_CONTOURS);
+        let estimador = PitchBendEstimator::default();
+
+        // Las notas con sus bends, en el formato que espera el upstream:
+        // (inicio, final, pitch, amplitud, bends).
+        let con_bends: Vec<NotaConBend> = notas
             .into_iter()
             .map(|nota| {
-                NoteEvent::from_amplitude(
-                    frame_to_time(
-                        nota.start_frame,
-                        AUDIO_SAMPLE_RATE,
-                        FFT_HOP,
-                        AUDIO_N_SAMPLES,
-                    ),
-                    frame_to_time(nota.end_frame, AUDIO_SAMPLE_RATE, FFT_HOP, AUDIO_N_SAMPLES),
-                    nota.pitch,
-                    nota.amplitude,
-                )
+                let inicio = frame_to_time(
+                    nota.start_frame,
+                    AUDIO_SAMPLE_RATE,
+                    FFT_HOP,
+                    AUDIO_N_SAMPLES,
+                );
+                let final_ =
+                    frame_to_time(nota.end_frame, AUDIO_SAMPLE_RATE, FFT_HOP, AUDIO_N_SAMPLES);
+                // Los bends se guardan en unidades de 1/3 de semitono,
+                // que es lo que devuelve el upstream en
+                // `get_pitch_bends`. La conversion a ticks de MIDI
+                // ocurre al escribir el fichero, que es donde la hace el
+                // upstream tambien (`note_events_to_midi`).
+                let shifts =
+                    estimador.estimate(&contornos, nota.start_frame, nota.end_frame, nota.pitch);
+                let bends = if shifts.is_empty() {
+                    None
+                } else {
+                    Some(shifts)
+                };
+                (inicio, final_, nota.pitch, nota.amplitude, bends)
+            })
+            .collect();
+
+        con_bends
+            .into_iter()
+            .map(|(inicio, final_, pitch, amplitud, bends)| {
+                NoteEvent::from_amplitude(inicio, final_, pitch, amplitud).with_pitch_bend(bends)
             })
             .collect()
     }
+}
+
+/// Una nota con su secuencia de pitch bend.
+///
+/// El tipo es el intermedio entre la deteccion (que produce notas en
+/// frames) y el evento musical (que lleva tiempos y velocidad).
+type NotaConBend = (f64, f64, u8, f32, Option<Vec<i16>>);
+
+/// Convierte un tensor `(n_frames, n_freqs)` en filas.
+fn a_filas(tensor: &Tensor, n_freqs: usize) -> Vec<Vec<f32>> {
+    let datos = tensor
+        .flatten_all()
+        .expect("aplanar")
+        .to_vec1::<f32>()
+        .expect("float32");
+    datos
+        .chunks_exact(n_freqs)
+        .map(|fila| fila.to_vec())
+        .collect()
 }
 
 /// Devuelve la longitud del audio original antes del relleno inicial.

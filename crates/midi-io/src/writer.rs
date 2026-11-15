@@ -53,6 +53,56 @@ pub const DEFAULT_RESOLUTION: u16 = 220;
 pub const DEFAULT_TEMPO: f64 = 120.0;
 
 /// Valor de pitch bend que representa el centro.
+///
+/// Escala de conversion de los bends a ticks de MIDI.
+pub const PITCH_BEND_SCALE: f64 = 4096.0;
+
+/// Bins por semitono: los bends llegan en unidades de 1/3 de semitono.
+pub const CONTOURS_BINS_PER_SEMITONE: usize = 3;
+
+/// Limite de los ticks de pitch bend (unas dos semitonas).
+pub const N_PITCH_BEND_TICKS: i64 = 8192;
+
+/// Quita los pitch bends de las notas que se solapan en el tiempo.
+///
+/// El formato MIDI aplica el pitch bend **por canal**, no nota a nota. El
+/// upstream resuelve el caso quitando los bends de las notas que se
+/// solapan (salvo que se pida explicitamente `multiple_pitch_bends`, que
+/// asigna un canal a cada nota).
+///
+/// El criterio es el del upstream: se ordenan las notas por
+/// `(inicio, final, pitch)` y, para cada una, se marca sin bends a todas
+/// las siguientes que empiezan antes de que acabe.
+///
+/// `notas` se devuelve MODIFICADA y en el mismo orden en que estaba: el
+/// orden de las notas no cambia, solo sus bends.
+pub fn drop_overlapping_pitch_bends(notas: &mut [NoteEvent]) {
+    let mut orden: Vec<usize> = (0..notas.len()).collect();
+    orden.sort_by(|a, b| {
+        let x = &notas[*a];
+        let y = &notas[*b];
+        x.start_time
+            .partial_cmp(&y.start_time)
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then(
+                x.end_time
+                    .partial_cmp(&y.end_time)
+                    .unwrap_or(std::cmp::Ordering::Equal),
+            )
+            .then(x.pitch.cmp(&y.pitch))
+    });
+
+    for (pos, i) in orden.iter().enumerate() {
+        for j in &orden[pos + 1..] {
+            if notas[*j].start_time >= notas[*i].end_time {
+                // La nota j empieza despues de que acaba la i.
+                break;
+            }
+            notas[*i].pitch_bend = None;
+            notas[*j].pitch_bend = None;
+        }
+    }
+}
 pub const PITCH_BEND_CENTER: i16 = 8192;
 
 /// Programa General MIDI por defecto: `Acoustic Grand Piano` (GM 0).
@@ -138,18 +188,39 @@ impl MidiWriter {
             Timing::Metrical(u15::new(self.resolution)),
         );
 
-        // Las notas se ordenan por tiempo de inicio y, a igualdad de
-        // tiempo, por pitch.
+        // El pitch bend del formato MIDI es POR CANAL, no nota a nota.
+        // Salvo que se pidan bends multiples (que asignan un canal a cada
+        // nota), dos notas que se solapan en el tiempo no pueden llevar
+        // bends distintos: el ultimo que se escribe manda.
+        //
+        // El upstream hace esto en `note_events_to_midi`, que es el
+        // ESCRITOR, y no en la deteccion: la lista de notas que devuelve
+        // conserva todos sus bends, y es el MIDI el que los descarta.
+        // Aqui igual: el drop se aplica aqui, no en la deteccion.
+        let mut notas_con_bends: Vec<NoteEvent> = notes.to_vec();
+        if !self.multiple_pitch_bends {
+            drop_overlapping_pitch_bends(&mut notas_con_bends);
+        }
+
+        // Las notas se ordenan por tiempo de inicio, y a igualdad de
+        // tiempo, por final y por pitch: es el criterio del upstream
+        // (`sorted(nota_events_with_pitch_bends)`, que ordena por la tupla
+        // completa).
         //
         // La deteccion de notas entrega las notas en el orden en que las
         // encuentra (los onsets, de mas reciente a mas antiguo, y luego el
         // truco de Melodia), no en orden temporal. Sin ordenar, el MIDI
         // tendria los eventos en un orden que no es el canonico.
-        let mut ordenadas: Vec<&NoteEvent> = notes.iter().collect();
+        let mut ordenadas: Vec<&NoteEvent> = notas_con_bends.iter().collect();
         ordenadas.sort_by(|a, b| {
             a.start_time
                 .partial_cmp(&b.start_time)
                 .unwrap_or(std::cmp::Ordering::Equal)
+                .then(
+                    a.end_time
+                        .partial_cmp(&b.end_time)
+                        .unwrap_or(std::cmp::Ordering::Equal),
+                )
                 .then(a.pitch.cmp(&b.pitch))
         });
 
@@ -221,12 +292,33 @@ impl MidiWriter {
             ));
 
             // Pitch bend: un evento por punto de la secuencia.
+            //
+            // Los bends llegan en unidades de 1/3 de semitono (que es lo
+            // que produce la deteccion) y se convierten a ticks de MIDI
+            // aqui, igual que hace el upstream en `note_events_to_midi`:
+            //
+            //   ticks = round(shift * 4096 / 3), recortados a +-8192
+            //
+            // El recorte limita los bends a unas dos semitonas.
             if let Some(bends) = &note.pitch_bend {
                 let count = bends.len().max(1);
                 for (i, bend) in bends.iter().enumerate() {
-                    let t = note.start_time + (note.duration() * i as f64 / count as f64);
-                    let value = PITCH_BEND_CENTER + *bend;
-                    let value = value.clamp(0, 16383) as u16;
+                    // Los tiempos se reparten uniformemente entre el
+                    // inicio y el final de la nota, como el
+                    // `np.linspace(start_time, end_time, len(pitch_bend))`
+                    // del upstream. OJO: el ultimo punto es
+                    // EXACTAMENTE el final, asi que el divisor es
+                    // `count - 1` y no `count`.
+                    let t = if count > 1 {
+                        note.start_time + (note.duration() * i as f64 / (count - 1) as f64)
+                    } else {
+                        note.start_time
+                    };
+                    let ticks = ((*bend as f64 * PITCH_BEND_SCALE
+                        / CONTOURS_BINS_PER_SEMITONE as f64)
+                        .round() as i64)
+                        .clamp(-N_PITCH_BEND_TICKS, N_PITCH_BEND_TICKS - 1);
+                    let value = (PITCH_BEND_CENTER as i64 + ticks).clamp(0, 16383) as u16;
                     events.push((
                         self.time_to_ticks(t),
                         TrackEventKind::Midi {
