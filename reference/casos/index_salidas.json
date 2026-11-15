@@ -2,6 +2,25 @@
   "descripcion": "Salidas finales del modelo, calculadas por el upstream (basic_pitch.inference.run_inference) sobre los 13 casos.",
   "nota": "Las notas detectadas estan en <caso>_notas.json.",
   "puntos": {
+    "acorde_vibrato": {
+      "note": "acorde_vibrato_note.npy",
+      "onset": "acorde_vibrato_onset.npy",
+      "contour": "acorde_vibrato_contour.npy",
+      "shape_note": [
+        225,
+        88
+      ],
+      "shape_onset": [
+        225,
+        88
+      ],
+      "shape_contour": [
+        225,
+        264
+      ],
+      "notas": "acorde_vibrato_notas.json",
+      "n_notas": 6
+    },
     "acordes": {
       "note": "acordes_note.npy",
       "onset": "acordes_onset.npy",
@@ -173,6 +192,25 @@
       "notas": "notas_simultaneas_notas.json",
       "n_notas": 4
     },
+    "notas_superpuestas": {
+      "note": "notas_superpuestas_note.npy",
+      "onset": "notas_superpuestas_onset.npy",
+      "contour": "notas_superpuestas_contour.npy",
+      "shape_note": [
+        216,
+        88
+      ],
+      "shape_onset": [
+        216,
+        88
+      ],
+      "shape_contour": [
+        216,
+        264
+      ],
+      "notas": "notas_superpuestas_notas.json",
+      "n_notas": 3
+    },
     "ruido": {
       "note": "ruido_note.npy",
       "onset": "ruido_onset.npy",
@@ -247,6 +285,44 @@
         264
       ],
       "notas": "vibrato_notas.json",
+      "n_notas": 2
+    },
+    "vibrato_extremo": {
+      "note": "vibrato_extremo_note.npy",
+      "onset": "vibrato_extremo_onset.npy",
+      "contour": "vibrato_extremo_contour.npy",
+      "shape_note": [
+        225,
+        88
+      ],
+      "shape_onset": [
+        225,
+        88
+      ],
+      "shape_contour": [
+        225,
+        264
+      ],
+      "notas": "vibrato_extremo_notas.json",
+      "n_notas": 4
+    },
+    "vibrato_sutil": {
+      "note": "vibrato_sutil_note.npy",
+      "onset": "vibrato_sutil_onset.npy",
+      "contour": "vibrato_sutil_contour.npy",
+      "shape_note": [
+        225,
+        88
+      ],
+      "shape_onset": [
+        225,
+        88
+      ],
+      "shape_contour": [
+        225,
+        264
+      ],
+      "notas": "vibrato_sutil_notas.json",
       "n_notas": 2
     }
   }

@@ -16,6 +16,7 @@ neuronal, la reconstrucción temporal y la detección de notas.
 | 7 · Validación | Las 11 etapas del pipeline, con su traza y las 6 métricas | TensorFlow, punto a punto |
 | 8 · Duración arbitraria | Reconstrucción temporal, flujo por lotes | `unwrap_output` del upstream, de extremo a extremo |
 | 9 · Posprocesamiento | Detección polifónica, onsets inferidos, Melodia Trick | `output_to_notes_polyphonic` del upstream: **0 desajustes** |
+| 10 · Pitch bend | Estimación por nota desde el contour, y política de canal al escribir | `get_pitch_bends` del upstream: **0 ticks** de diferencia |
 | 7 · 13 casos | Señales controladas: silencio, nota corta, acordes, vibrato, glissando, ruido, 30 s, límites de ventana... | Los 13, nota a nota contra el upstream |
 
 La cadena completa, de un archivo de audio a un MIDI:
@@ -141,7 +142,7 @@ fmt:     sin diferencias
 
 | Fase | Contenido |
 |---|---|
-| 10 · Pitch bend | El cálculo **ya está escrito y probado** (`crates/transcription/src/pitch_bend.rs`), pero **no está conectado**: el campo `pitch_bend` del evento se rellena con `None`. Falta el cableado |
+| — | Nada: el bloque P4 (fases 8, 9, 10 y 11) está cerrado |
 | 11 · MIDI | Pulir el escritor (pitch bend por canal, tempo, metadatos) |
 | 12 · API | Biblioteca pública, configuración por comando, API de Rust |
 | 13 · Tests | Suite de integración, regresión y CI |

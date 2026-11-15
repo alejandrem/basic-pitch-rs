@@ -26,6 +26,13 @@ Los casos son:
     12. audio de larga duracion
     13. notas cerca de los limites entre ventanas
 
+Y ademas, para la Fase 10 (pitch bend):
+
+    14. vibrato sutil (variaciones pequenas)
+    15. vibrato extremo (variaciones por encima del rango permitido)
+    16. acorde con vibrato (varias notas simultaneas con bend)
+    17. notas superpuestas
+
 Salida: `reference/casos/`
 """
 
@@ -194,6 +201,42 @@ def caso_deslizamiento() -> np.ndarray:
     return mix([(0.2, glissando(1.8, midi_a_hz(60), midi_a_hz(72)))])
 
 
+def caso_vibrato_sutil() -> np.ndarray:
+    """Variaciones PEQUEÑAS: un vibrato de 5 cents, casi imperceptible."""
+    return mix([(0.3, vibrato(1.8, midi_a_hz(69), cents=5.0, hz=6.0))])
+
+
+def caso_vibrato_extremo() -> np.ndarray:
+    """Variaciones SUPERIORES al rango permitido.
+
+    El pitch bend del MIDI esta limitado a unas dos semitonas (8192 ticks).
+    Con un vibrato de 120 cents (una octava) el recorte tiene que actuar.
+    """
+    return mix([(0.3, vibrato(1.8, midi_a_hz(69), cents=120.0, hz=4.0))])
+
+
+def caso_acorde_vibrato() -> np.ndarray:
+    """Varias notas SIMULTANEAS, cada una con su propio vibrato.
+
+    Es el caso que obliga al recorte de bends: el MIDI aplica el bend por
+    canal, asi que dos notas solapadas no pueden llevar bends distintos.
+    """
+    clips = []
+    for nota, cents in [(60, 20.0), (64, 35.0), (67, 50.0)]:
+        clips.append((0.3, vibrato(1.8, midi_a_hz(nota), cents=cents, hz=5.0)))
+    return mix(clips)
+
+
+def caso_notas_superpuestas() -> np.ndarray:
+    """Dos notas del MISMO pitch que se solapan en el tiempo."""
+    return mix(
+        [
+            (0.3, tono(midi_a_hz(60), 1.2, amp=0.4)),
+            (0.8, tono(midi_a_hz(60), 1.2, amp=0.4)),
+        ]
+    )
+
+
 def caso_ruido() -> np.ndarray:
     rng = np.random.default_rng(20240518)
     nota = tono(midi_a_hz(69), 1.8, amp=0.4)
@@ -237,6 +280,10 @@ CASOS = {
     "vibrato": caso_vibrato,
     "deslizamiento": caso_deslizamiento,
     "ruido": caso_ruido,
+    "vibrato_sutil": caso_vibrato_sutil,
+    "vibrato_extremo": caso_vibrato_extremo,
+    "acorde_vibrato": caso_acorde_vibrato,
+    "notas_superpuestas": caso_notas_superpuestas,
     "duracion_larga": caso_duracion_larga,
     "limites_ventana": caso_limites_ventana,
 }

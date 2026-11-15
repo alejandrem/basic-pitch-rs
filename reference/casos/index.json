@@ -68,6 +68,30 @@
       "duracion_s": 2.5,
       "sample_rate": 22050
     },
+    "vibrato_sutil": {
+      "audio": "vibrato_sutil.wav",
+      "muestras": 57330,
+      "duracion_s": 2.6,
+      "sample_rate": 22050
+    },
+    "vibrato_extremo": {
+      "audio": "vibrato_extremo.wav",
+      "muestras": 57330,
+      "duracion_s": 2.6,
+      "sample_rate": 22050
+    },
+    "acorde_vibrato": {
+      "audio": "acorde_vibrato.wav",
+      "muestras": 57330,
+      "duracion_s": 2.6,
+      "sample_rate": 22050
+    },
+    "notas_superpuestas": {
+      "audio": "notas_superpuestas.wav",
+      "muestras": 55125,
+      "duracion_s": 2.5,
+      "sample_rate": 22050
+    },
     "duracion_larga": {
       "audio": "duracion_larga.wav",
       "muestras": 655767,

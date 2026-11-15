@@ -149,7 +149,7 @@ OK   onset_features                              MAE 3.663e-5  MSE 4.830e-9   RM
 OK   onset                                       MAE 2.653e-6  MSE 2.007e-11  RMSE 4.480e-6  max 5.338e-5  rel 7.936e-5  cos 0.9999999990
 ```
 
-### 7.6.3. Los trece casos de prueba
+### 7.6.3. Los diecisiete casos de prueba
 
 Las señales las genera `tools/weight-export/make_cases.py`, y sus
 oráculos (salidas finales y notas detectadas) los calcula el **upstream**
@@ -170,10 +170,18 @@ con `tools/weight-export/make_cases_oracle.py`.
 | `ruido` | una nota con ruido de fondo | 2 | 1 = 1 |
 | `duracion_larga` | 30 segundos, unas 19 ventanas | 19 | 63 = 63 |
 | `limites_ventana` | notas a ambos lados del límite entre ventanas | 2 | 8 = 8 |
+| `vibrato_sutil` | variaciones de afinación mínimas | 2 | 2 = 2 |
+| `vibrato_extremo` | variaciones por encima del rango del pitch bend | 2 | 4 = 4 |
+| `acorde_vibrato` | varias notas simultáneas, cada una con su vibrato | 2 | 6 = 6 |
+| `notas_superpuestas` | dos notas del mismo pitch solapadas | 2 | 3 = 3 |
 
-**Las trece coinciden nota a nota con el upstream**: mismo número, mismos
-pitches, mismos inicios y finales (con una tolerancia de un frame, que se
-explica más abajo).
+Los cuatro últimos son los de la **Fase 10** (pitch bend), y se validan
+además nota a nota en
+[`crates/transcription/tests/pitch_bend.rs`](../../crates/transcription/tests/pitch_bend.rs).
+
+**Los diecisiete coinciden nota a nota con el upstream**: mismo número,
+mismos pitches, mismos inicios y finales (con una tolerancia de un frame,
+que se explica más abajo).
 
 Dos detalles que salen de los tests:
 
@@ -197,8 +205,8 @@ Dos detalles que salen de los tests:
 El MAE es la comprobación **estricta** (mide el error típico) y el máximo
 va con margen, porque es la cola.
 
-Medido en los trece casos, el MAE está entre 2e-8 y 7e-6 en **todos**
-ellos: el error de la red **no se acumula** con las ventanas (el caso de
+Medido en los diecisiete casos, el MAE está entre 2e-8 y 7e-6 en
+**todos** ellos: el error de la red **no se acumula** con las ventanas (el caso de
 30 segundos, con 19 ventanas, tiene el mismo MAE que uno de 2). Lo que
 varía es el máximo (de 4e-7 a 1.03e-3), que depende de los valores
 concretos de cada caso.

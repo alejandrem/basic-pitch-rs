@@ -23,6 +23,10 @@
 //! | `ruido` | una nota con ruido de fondo |
 //! | `duracion_larga` | 30 segundos, unas 18 ventanas |
 //! | `limites_ventana` | notas a ambos lados del limite entre ventanas |
+//! | `vibrato_sutil` | variaciones de afinacion minimas |
+//! | `vibrato_extremo` | variaciones por encima del rango del pitch bend |
+//! | `acorde_vibrato` | varias notas simultaneas, cada una con su vibrato |
+//! | `notas_superpuestas` | dos notas del mismo pitch solapadas |
 
 use std::path::{Path, PathBuf};
 
@@ -260,7 +264,7 @@ fn comprobar(nombre: &str) {
     );
 }
 
-/// Los trece casos.
+/// Los diecisiete casos.
 ///
 /// Va marcado como `#[ignore]` porque el caso de 30 segundos (19 ventanas)
 /// tarda casi un minuto en modo debug. El guardián permanente del suite es
@@ -274,7 +278,7 @@ fn comprobar(nombre: &str) {
 /// ```
 #[test]
 #[ignore = "tarda casi un minuto en modo debug"]
-fn los_trece_casos_coinciden_con_el_upstream() {
+fn los_diecisiete_casos_coinciden_con_el_upstream() {
     if skip_si_no_hay_casos() {
         return;
     }
@@ -293,6 +297,11 @@ fn los_trece_casos_coinciden_con_el_upstream() {
         "ruido",
         "duracion_larga",
         "limites_ventana",
+        // Los cuatro de la Fase 10 (pitch bend).
+        "vibrato_sutil",
+        "vibrato_extremo",
+        "acorde_vibrato",
+        "notas_superpuestas",
     ];
 
     println!("Los 13 casos de la Fase 7:");

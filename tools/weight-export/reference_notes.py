@@ -52,12 +52,32 @@ def main() -> int:
         ).reshape(-1, 4)
         np.save(out_dir / f"{nombre}_notes.npy", notas)
 
+        # Los PITCH BENDS son una secuencia de enteros por nota (en ticks
+        # de MIDI), y no caben en una matriz, asi que van en un JSON aparte
+        # con la lista completa de notas.
+        completas = [
+            {
+                "start_time": float(e[0]),
+                "end_time": float(e[1]),
+                "pitch": int(e[2]),
+                "amplitude": float(e[3]),
+                "pitch_bend": (
+                    [int(v) for v in e[4]] if e[4] is not None else None
+                ),
+            }
+            for e in note_events
+        ]
+        (out_dir / f"{nombre}_notas.json").write_text(
+            json.dumps(completas, indent=1) + "\n", encoding="utf-8"
+        )
+
         midi.write(str(out_dir / f"{nombre}_upstream.mid"))
 
         indice[nombre] = {
             "audio": str(ruta),
             "n_notas": int(len(note_events)),
             "notas_npy": f"{nombre}_notes.npy",
+            "notas_json": f"{nombre}_notas.json",
             "midi_upstream": f"{nombre}_upstream.mid",
             "columnas": ["start_time", "end_time", "pitch", "amplitude"],
             "primera": [float(x) for x in notas[0]] if len(notas) else None,

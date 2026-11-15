@@ -6,6 +6,7 @@
       "audio": "basic-pitch/tests/resources/vocadito_10.wav",
       "n_notas": 28,
       "notas_npy": "vocadito_10_notes.npy",
+      "notas_json": "vocadito_10_notas.json",
       "midi_upstream": "vocadito_10_upstream.mid",
       "columnas": [
         "start_time",
@@ -24,30 +25,6 @@
         1.4396371841430664,
         47.0,
         0.4428795874118805
-      ]
-    },
-    "peso_del_silencio": {
-      "audio": "/tmp/opencode/render/peso_del_silencio.wav",
-      "n_notas": 2158,
-      "notas_npy": "peso_del_silencio_notes.npy",
-      "midi_upstream": "peso_del_silencio_upstream.mid",
-      "columnas": [
-        "start_time",
-        "end_time",
-        "pitch",
-        "amplitude"
-      ],
-      "primera": [
-        177.131591796875,
-        177.445068359375,
-        29.0,
-        0.8039569854736328
-      ],
-      "ultima": [
-        9.862006187438965,
-        10.083879470825195,
-        51.0,
-        0.29393577575683594
       ]
     }
   }

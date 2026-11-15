@@ -77,6 +77,9 @@ def main() -> int:
                 "end_time": float(e[1]),
                 "pitch": int(e[2]),
                 "amplitude": float(e[3]),
+                "pitch_bend": (
+                    [int(v) for v in e[4]] if e[4] is not None else None
+                ),
             }
             for e in eventos
         ]
