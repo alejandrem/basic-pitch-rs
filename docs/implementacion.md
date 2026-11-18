@@ -33,7 +33,7 @@ Cada fase se encuentra en su propio archivo dentro de esta carpeta `docs/`:
 | 16 | Fase 16: Integración del motor (Fase 12) | [pruebas/fase-16-integracion-motor.md](pruebas/fase-16-integracion-motor.md) |
 | 17 | Fase 17: Pruebas automatizadas (Fase 13) | [pruebas/fase-17-pruebas-automatizadas.md](pruebas/fase-17-pruebas-automatizadas.md) |
 | 18 | Fase 18: Rendimiento (Fase 14) | [pruebas/fase-18-rendimiento.md](pruebas/fase-18-rendimiento.md) |
-| 19 | Fase 19: Documentación (Fase 15) | [fase-19-documentacion.md](fase-19-documentacion.md) |
+| 19 | Fase 19: Documentación (Fase 15) | [pruebas/fase-19-documentacion.md](pruebas/fase-19-documentacion.md) |
 
 ---
 

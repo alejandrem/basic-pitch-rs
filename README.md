@@ -230,6 +230,58 @@ Se busca conservar:
 
 Para comprobar la fidelidad de la implementación se realizan comparaciones numéricas entre los resultados de Rust y los resultados de referencia de la implementación original.
 
+## API de biblioteca
+
+El motor se puede usar como crate de Rust sin tocar el CLI:
+
+```rust
+use basic_pitch_transcription::Transcriber;
+use std::path::Path;
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let transcriptor = Transcriber::load(Path::new("models/basic-pitch/icassp-2022"))?;
+    let resultado = transcriptor.transcribe("cancion.mp3")?;
+
+    println!("{} notas, {:.2} s", resultado.notes.len(), resultado.duration_seconds);
+
+    // MIDI ya generado en memoria.
+    std::fs::write("cancion.mid", &resultado.midi_data)?;
+    Ok(())
+}
+```
+
+`Transcriber::load` carga el modelo una sola vez y se reutiliza para varios
+archivos. La API admite `load_with_device(...)` para compatibilidad futura;
+la implementacion actual es CPU-only. Los errores son tipados
+(`TranscriptionError`) y cubren audio, remuestreo, modelo, frontend, Candle,
+reconstruccion, E/S y generacion MIDI.
+
+## Rendimiento
+
+Linea base medida con `cargo bench -p basic-pitch-transcription` sobre
+`vocadito_10.wav` (9.1 s de audio), en CPU, modo release:
+
+| Etapa | Tiempo |
+|---|---:|
+| Decodificacion | ~1.06 ms |
+| Remuestreo | ~1.09 ms |
+| Ventanas + frontend + red neuronal | ~584 ms |
+| Pipeline completo | ~585 ms |
+
+El cuello de botella es la red neuronal y el frontend acustico, no el audio.
+La medicion es reproducible con `cargo bench`; los resultados detallados
+quedan en `target/criterion/`.
+
+## Procedencia del modelo
+
+- Modelo: `basic-pitch` / `icassp-2022` (TensorFlow SavedModel).
+- Repositorio de referencia: https://github.com/spotify/basic-pitch (commit `fa5997af0a8210982619003269994a1be25eddf3`, paquete 0.4.0).
+- Artefacto ONNX: `basic_pitch/saved_models/icassp_2022/nmp.onnx`
+  (sha256 `2c3c1d144bfa61ad236e92e169c13535c880469a12a047d4e73451f2c059a0ec`).
+- Pesos en `models/basic-pitch/icassp-2022/` con SHA-256 publicados en
+  `SHA256SUMS`. Las transformaciones aplicadas estan en `source_metadata.json`.
+- Precision: `float32`, sin cuantizacion ni redondeo.
+
 ## Estado del desarrollo
 
 El proyecto se desarrolla de manera incremental.
@@ -246,7 +298,7 @@ El proyecto se desarrolla de manera incremental.
 | Detección polifónica de notas | Completo | `output_to_notes_polyphonic` del upstream: **0 desajustes** |
 | Escritura de MIDI | Completo | - |
 | Transcripción de extremo a extremo | Completo | - |
-| Pitch bend | Pendiente | - |
+| Pitch bend | Completo | `get_pitch_bends` del upstream: 0 ticks de diferencia |
 | API pública | Pendiente | - |
 
 ## Visión a futuro
