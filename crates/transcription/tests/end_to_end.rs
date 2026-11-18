@@ -86,7 +86,7 @@ fn un_archivo_inexistente_produce_error() {
     let transcriptor =
         Transcriber::load(&repo_root().join("models/basic-pitch/icassp-2022")).expect("modelo");
     let error = transcriptor
-        .transcribe(&repo_root().join("no-existe.wav"))
+        .transcribe(repo_root().join("no-existe.wav"))
         .expect_err("deberia fallar");
     assert!(error.to_string().contains("no se encontro"));
 }

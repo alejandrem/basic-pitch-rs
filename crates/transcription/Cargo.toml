@@ -24,6 +24,8 @@ tracing.workspace = true
 [dev-dependencies]
 # Solo para tests: leer los .npy de la referencia y cargar el modelo.
 basic-pitch-reference-npy.workspace = true
+# Lector independiente de MIDI para las pruebas de integracion (Fase 13).
+midly.workspace = true
 # Para medir las diferencias con el upstream.
 basic-pitch-validation.workspace = true
 serde_json.workspace = true
