@@ -31,6 +31,7 @@ The reference implementation (Python) additionally relies on libsndfile
 for audio input. This Rust port does NOT link libsndfile: it uses
 Symphonia, which is a pure-Rust decoder.
 
-The test fixtures in basic-pitch/tests/resources include audio from the
+The test fixtures in basic-pitch/tests/resources, and the copy of
+vocadito_10.wav versioned in reference/audio_reference/, include audio from the
 Vocadito dataset, licensed under Creative Commons Attribution 4.0
 International: https://zenodo.org/record/5578807
