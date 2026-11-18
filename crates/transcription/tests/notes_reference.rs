@@ -17,6 +17,9 @@ use basic_pitch_transcription::note_detection::{
 use basic_pitch_transcription::stitching::frame_to_time;
 use candle_core::Tensor;
 
+mod common;
+use common::{omitir, vocadito_path};
+
 /// Raiz del repositorio.
 fn repo_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
@@ -30,7 +33,7 @@ fn oracle_dir() -> PathBuf {
 /// Si falta el oraculo, no hay nada que comparar.
 fn skip_si_falta() -> bool {
     if !oracle_dir().exists() {
-        eprintln!("OMITIDO: no existe el oraculo de notas");
+        omitir("no existe el oraculo de notas");
         return true;
     }
     false
@@ -66,7 +69,7 @@ fn comprobar(nombre: &str) {
 
     // El audio del oraculo.
     let audio = match nombre {
-        "vocadito_10" => raiz.join("basic-pitch/tests/resources/vocadito_10.wav"),
+        "vocadito_10" => vocadito_path(),
         "peso_del_silencio" => raiz.join("reference/audio_reference/peso_del_silencio.wav"),
         otro => panic!("audio desconocido: {otro}"),
     };
@@ -195,6 +198,10 @@ fn a_filas(tensor: &Tensor) -> Vec<f32> {
 #[test]
 fn las_notas_del_vocadito_coinciden_con_el_upstream() {
     if skip_si_falta() {
+        return;
+    }
+    if !vocadito_path().exists() {
+        omitir("falta el audio vocadito_10.wav");
         return;
     }
     comprobar("vocadito_10");

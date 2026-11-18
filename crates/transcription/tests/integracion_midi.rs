@@ -14,6 +14,9 @@ use std::path::{Path, PathBuf};
 use basic_pitch_transcription::Transcriber;
 use midly::{MidiMessage, Smf, TrackEventKind};
 
+mod common;
+use common::{omitir, vocadito_path};
+
 /// Raiz del repositorio.
 fn repo_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
@@ -24,11 +27,9 @@ fn skip_si_faltan() -> bool {
     if !repo_root()
         .join("models/basic-pitch/icassp-2022/model.safetensors")
         .exists()
-        || !repo_root()
-            .join("basic-pitch/tests/resources/vocadito_10.wav")
-            .exists()
+        || !vocadito_path().exists()
     {
-        eprintln!("OMITIDO: faltan el modelo o el audio de referencia");
+        omitir("faltan el modelo o el audio de referencia");
         return true;
     }
     false
@@ -43,7 +44,7 @@ fn la_transcripcion_genera_un_midi_legible_por_un_lector_independiente() {
     let transcriptor =
         Transcriber::load(&raiz.join("models/basic-pitch/icassp-2022")).expect("modelo");
 
-    let audio = raiz.join("basic-pitch/tests/resources/vocadito_10.wav");
+    let audio = vocadito_path();
     let resultado = transcriptor.transcribe(&audio).expect("transcripcion");
 
     // El upstream encuentra 28 notas en este audio.

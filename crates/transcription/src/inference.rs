@@ -5,7 +5,6 @@ use std::path::Path;
 use basic_pitch_audio_io::decode_file;
 use basic_pitch_audio_preprocess::{
     resample, to_mono, AudioWindows, AUDIO_N_SAMPLES, AUDIO_SAMPLE_RATE, FFT_HOP, HOP_SIZE,
-    INITIAL_PADDING,
 };
 use basic_pitch_model::BasicPitchModel;
 use candle_core::{Device, Tensor};
@@ -60,6 +59,17 @@ pub enum TranscriptionError {
     /// Error al generar el MIDI.
     #[error("error al generar el MIDI: {0}")]
     Midi(#[from] MidiWriteError),
+
+    /// Una salida del modelo tiene una forma que el posprocesado no espera.
+    ///
+    /// Aparece, por ejemplo, con un modelo distinto del previsto o con unos
+    /// pesos corruptos. Antes era un `panic!` dentro de la biblioteca.
+    #[error("forma inesperada en la salida del modelo: {0}")]
+    UnexpectedShape(String),
+
+    /// Se pidio un dispositivo de ejecucion que esta version no soporta.
+    #[error("dispositivo no soportado: {0} (la implementacion actual es CPU-only)")]
+    UnsupportedDevice(String),
 }
 
 impl From<basic_pitch_model::ModelError> for TranscriptionError {
@@ -116,11 +126,15 @@ impl Transcriber {
     /// Carga el modelo desde un directorio, indicando el dispositivo de
     /// ejecucion.
     ///
-    /// La implementacion actual es CPU-only: el parametro se acepta para
-    /// mantener la firma de la API estable (Fase 12) y se reserva para
-    /// futuras versiones con backend acelerado de Candle. Si se pasa un
-    /// dispositivo distinto de la CPU, se usa la CPU.
-    pub fn load_with_device(model_dir: &Path, _device: Device) -> Result<Self, TranscriptionError> {
+    /// La implementacion actual es CPU-only: la firma se mantiene estable
+    /// (Fase 12) para cuando exista un backend acelerado de Candle. Mientras
+    /// tanto, un dispositivo distinto de la CPU devuelve
+    /// [`TranscriptionError::UnsupportedDevice`] en vez de ejecutarse en la
+    /// CPU sin avisar.
+    pub fn load_with_device(model_dir: &Path, device: Device) -> Result<Self, TranscriptionError> {
+        if !device.is_cpu() {
+            return Err(TranscriptionError::UnsupportedDevice(format!("{device:?}")));
+        }
         Self::load(model_dir)
     }
 
@@ -155,7 +169,7 @@ impl Transcriber {
 
         // 5. Inferencia y reconstruccion.
         let predictions = self.run_model(&windows)?;
-        let notes = self.to_notes(&predictions, windows.original_length());
+        let notes = self.to_notes(&predictions)?;
 
         // Generacion del MIDI en memoria (Fase 12): el resultado lleva los
         // bytes listos para guardarlos o enviarlos sin tocar el sistema de
@@ -186,15 +200,20 @@ impl Transcriber {
     ///   -> BasicPitchModel::forward(...)        -> note, onset, contour
     /// ```
     ///
-    /// # Por que no se acumulan las predicciones
+    /// # Memoria
     ///
-    /// La prediccion de cada ventana se incorpora **inmediatamente** a la
-    /// reconstruccion temporal, y asi se puede soltar. Acumularlas todas
-    /// costaria 296 KiB por ventana, es decir, unos 634 MiB por hora de
-    /// audio.
+    /// La salida cruda de cada ventana (172 frames) se suelta en cuanto se
+    /// incorpora a la reconstruccion, pero la reconstruccion conserva los 142
+    /// frames utiles de cada ventana hasta `finish()`. El consumo de memoria
+    /// sigue siendo **lineal con la duracion**: unos 244 KiB por ventana, del
+    /// orden de 500 MiB por hora de audio, es decir, solo un 17 % menos que
+    /// acumular las salidas completas (296 KiB por ventana). A eso se suman
+    /// las copias temporales de `to_notes` y el audio decodificado.
     ///
-    /// Es el requisito del apartado 8.1 de la fase de inferencia sobre
-    /// audios de duracion arbitraria.
+    /// Ademas, la deteccion de notas trabaja sobre la matriz completa, asi que
+    /// un procesado en streaming de verdad exigiria redisenarla. Es adecuado
+    /// para canciones; para audios de varias horas habria que trocear el
+    /// archivo.
     fn run_model(&self, windows: &AudioWindows) -> Result<ReconstructedOutput, TranscriptionError> {
         // El numero de frames que sobreviven se conoce **antes** de inferir:
         // depende solo de la longitud del audio.
@@ -224,22 +243,18 @@ impl Transcriber {
     fn to_notes(
         &self,
         predictions: &ReconstructedOutput,
-        _original_length: usize,
-    ) -> Vec<NoteEvent> {
+    ) -> Result<Vec<NoteEvent>, TranscriptionError> {
         let n_freqs = N_NOTES;
-        let frames = predictions
-            .note
-            .flatten_all()
-            .expect("aplanar")
-            .to_vec1::<f32>()
-            .expect("float32");
-        let onsets = predictions
-            .onset
-            .flatten_all()
-            .expect("aplanar")
-            .to_vec1::<f32>()
-            .expect("float32");
+        let frames = a_vec(&predictions.note)?;
+        let onsets = a_vec(&predictions.onset)?;
         let n_frames = frames.len() / n_freqs;
+        if n_frames * n_freqs != frames.len() || onsets.len() != frames.len() {
+            return Err(TranscriptionError::UnexpectedShape(format!(
+                "note tiene {} valores y onset {}; se esperaba un multiplo de {n_freqs} y que coincidieran",
+                frames.len(),
+                onsets.len()
+            )));
+        }
 
         let notas = output_to_notes_polyphonic(
             &frames,
@@ -256,7 +271,7 @@ impl Transcriber {
         //
         // El estimador trabaja con la matriz de contornos por FILAS (una
         // por frame), asi que se construye desde la salida reconstruida.
-        let contornos = a_filas(&predictions.contour, basic_pitch_cqt::N_FREQ_BINS_CONTOURS);
+        let contornos = a_filas(&predictions.contour, basic_pitch_cqt::N_FREQ_BINS_CONTOURS)?;
         let estimador = PitchBendEstimator::default();
 
         // Las notas con sus bends, en el formato que espera el upstream:
@@ -288,12 +303,12 @@ impl Transcriber {
             })
             .collect();
 
-        con_bends
+        Ok(con_bends
             .into_iter()
             .map(|(inicio, final_, pitch, amplitud, bends)| {
                 NoteEvent::from_amplitude(inicio, final_, pitch, amplitud).with_pitch_bend(bends)
             })
-            .collect()
+            .collect())
     }
 }
 
@@ -303,20 +318,22 @@ impl Transcriber {
 /// frames) y el evento musical (que lleva tiempos y velocidad).
 type NotaConBend = (f64, f64, u8, f32, Option<Vec<i16>>);
 
-/// Convierte un tensor `(n_frames, n_freqs)` en filas.
-fn a_filas(tensor: &Tensor, n_freqs: usize) -> Vec<Vec<f32>> {
-    let datos = tensor
-        .flatten_all()
-        .expect("aplanar")
-        .to_vec1::<f32>()
-        .expect("float32");
-    datos
-        .chunks_exact(n_freqs)
-        .map(|fila| fila.to_vec())
-        .collect()
+/// Aplana un tensor a un vector `f32` en orden row-major.
+fn a_vec(tensor: &Tensor) -> Result<Vec<f32>, TranscriptionError> {
+    Ok(tensor.flatten_all()?.to_vec1::<f32>()?)
 }
 
-/// Devuelve la longitud del audio original antes del relleno inicial.
-pub fn original_length(resampled_len: usize) -> usize {
-    resampled_len.saturating_sub(INITIAL_PADDING)
+/// Convierte un tensor `(n_frames, n_freqs)` en filas.
+fn a_filas(tensor: &Tensor, n_freqs: usize) -> Result<Vec<Vec<f32>>, TranscriptionError> {
+    let datos = a_vec(tensor)?;
+    if n_freqs == 0 || (datos.len() / n_freqs) * n_freqs != datos.len() {
+        return Err(TranscriptionError::UnexpectedShape(format!(
+            "{} valores no forman filas de {n_freqs} columnas",
+            datos.len()
+        )));
+    }
+    Ok(datos
+        .chunks_exact(n_freqs)
+        .map(|fila| fila.to_vec())
+        .collect())
 }

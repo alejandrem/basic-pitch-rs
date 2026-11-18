@@ -20,6 +20,9 @@ use std::path::{Path, PathBuf};
 
 use basic_pitch_transcription::Transcriber;
 
+mod common;
+use common::{omitir, vocadito_path};
+
 /// Raiz del repositorio.
 fn repo_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
@@ -30,9 +33,9 @@ fn skip_si_faltan() -> bool {
     if !repo_root()
         .join("models/basic-pitch/icassp-2022/model.safetensors")
         .exists()
-        || !repo_root().join("basic-pitch/tests/resources").exists()
+        || !vocadito_path().exists()
     {
-        eprintln!("OMITIDO: faltan el modelo o los recursos de audio");
+        omitir("faltan el modelo o el audio de referencia");
         return true;
     }
     false
@@ -47,7 +50,7 @@ fn la_cadena_completa_se_ejecuta_sobre_un_archivo_real() {
     let transcriptor =
         Transcriber::load(&raiz.join("models/basic-pitch/icassp-2022")).expect("modelo");
 
-    let audio = raiz.join("basic-pitch/tests/resources/vocadito_10.wav");
+    let audio = vocadito_path();
     let resultado = transcriptor.transcribe(&audio).expect("transcripcion");
 
     // 9.1 segundos de audio a 22050 Hz.

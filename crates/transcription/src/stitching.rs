@@ -78,7 +78,7 @@ pub enum StitchingError {
         actual: usize,
     },
 
-    /// Se han reconstructionido ventanas de distinta anchura.
+    /// Se han recibido ventanas de distinta anchura.
     #[error("las ventanas tienen anchuras distintas: {anterior} y {actual}")]
     InconsistentWidth {
         /// Anchura de la ventana anterior.
@@ -87,7 +87,7 @@ pub enum StitchingError {
         actual: usize,
     },
 
-    /// No se ha reconstructionido ninguna ventana.
+    /// No se ha recibido ninguna ventana.
     #[error("no hay ventanas que reconstruir")]
     NoWindows,
 
@@ -181,7 +181,7 @@ pub struct Unwrapper {
 }
 
 impl Unwrapper {
-    /// Crea un reconstruccion.
+    /// Crea un reconstructor.
     ///
     /// - `n_frames_finales`: frames que sobreviven. Se calcula con
     ///   `expected_frames` **antes** de inferir, porque depende solo de la
@@ -282,7 +282,7 @@ pub struct ModelUnwrapper {
 }
 
 impl ModelUnwrapper {
-    /// Crea un reconstruccion para las tres salidas.
+    /// Crea un reconstructor para las tres salidas.
     pub fn new(n_frames_finales: usize, n_overlapping_frames: usize) -> Self {
         Self {
             note: Unwrapper::new(n_frames_finales, n_overlapping_frames),
