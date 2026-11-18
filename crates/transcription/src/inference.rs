@@ -86,7 +86,7 @@ pub struct TranscriptionResult {
 }
 
 /// El motor de transcripcion.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Transcriber {
     /// Modelo neuronal.
     pub model: BasicPitchModel,
