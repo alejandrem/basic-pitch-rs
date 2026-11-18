@@ -24,6 +24,9 @@ use basic_pitch_reference_npy::read_f32;
 use basic_pitch_transcription::stitching::{expected_frames, ModelUnwrapper, N_OVERLAPPING_FRAMES};
 use candle_core::Tensor;
 
+mod common;
+use common::{omitir, vocadito_path};
+
 /// Raiz del repositorio.
 fn repo_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
@@ -41,16 +44,21 @@ fn oracle_dir() -> PathBuf {
 
 /// Directorio de los recursos de audio del upstream.
 fn resources_dir() -> PathBuf {
-    repo_root().join("basic-pitch/tests/resources")
+    let referencia = repo_root().join("reference/audio_reference");
+    if referencia.join("vocadito_10.wav").exists() {
+        referencia
+    } else {
+        repo_root().join("basic-pitch/tests/resources")
+    }
 }
 
 /// Si faltan los assets, no hay nada que comparar.
 fn skip_si_faltan() -> bool {
     if !model_dir().join("model.safetensors").exists()
         || !oracle_dir().exists()
-        || !resources_dir().exists()
+        || !resources_dir().join("vocadito_10.wav").exists()
     {
-        eprintln!("OMITIDO: faltan el modelo, el oraculo o los recursos de audio");
+        omitir("faltan el modelo, el oraculo o los recursos de audio");
         return true;
     }
     false

@@ -30,6 +30,9 @@ use std::path::{Path, PathBuf};
 
 use basic_pitch_transcription::Transcriber;
 
+mod common;
+use common::{omitir, vocadito_path};
+
 /// Raiz del repositorio.
 fn repo_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
@@ -168,11 +171,11 @@ fn notas_sin_vibrato() {
     if skip_si_falta() {
         return;
     }
-    comprobar(
-        "vocadito_10",
-        &repo_root().join("basic-pitch/tests/resources/vocadito_10.wav"),
-        &oracle_dir(),
-    );
+    if !vocadito_path().exists() {
+        omitir("falta el audio vocadito_10.wav");
+        return;
+    }
+    comprobar("vocadito_10", &vocadito_path(), &oracle_dir());
 }
 
 /// Escenario 2: notas con vibrato.
