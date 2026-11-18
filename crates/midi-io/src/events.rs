@@ -22,7 +22,7 @@
 //! permite saber que.nota salio de una activacion de 0.51 y no de 0.52.
 
 /// Un evento de nota listo para exportar a MIDI.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct NoteEvent {
     /// Tiempo de inicio, en segundos.
     pub start_time: f64,
