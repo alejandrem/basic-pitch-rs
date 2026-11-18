@@ -152,6 +152,7 @@ dependencies = [
  "basic-pitch-reference-npy",
  "basic-pitch-validation",
  "candle-core",
+ "midly",
  "serde",
  "serde_json",
  "tempfile",
