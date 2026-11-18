@@ -14,7 +14,6 @@
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-use basic_pitch_midi_io::MidiWriter;
 use basic_pitch_model::ModelConfig;
 
 const DEFAULT_MODEL_DIR: &str = "models/basic-pitch/icassp-2022";
@@ -152,10 +151,9 @@ fn transcribe(
         .map(PathBuf::from)
         .unwrap_or_else(|| audio.with_extension("mid"));
 
-    // El evento musical es UNO solo (el canonico de midi-io), con la
-    // velocidad ya calculada a partir de la amplitud del modelo.
-    MidiWriter::new()
-        .write(&resultado.notes, &destino)
+    // El MIDI ya viene generado en memoria dentro del resultado (Fase 12):
+    // solo hay que volcarlo al disco.
+    std::fs::write(&destino, &resultado.midi_data)
         .map_err(|e| format!("no se pudo escribir {:?}: {e}", destino))?;
 
     Ok(format!(

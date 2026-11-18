@@ -8,7 +8,7 @@ use basic_pitch_audio_preprocess::{
     INITIAL_PADDING,
 };
 use basic_pitch_model::BasicPitchModel;
-use candle_core::Tensor;
+use candle_core::{Device, Tensor};
 
 use crate::note_detection::{output_to_notes_polyphonic, NoteEvent, N_NOTES};
 use crate::pitch_bend::PitchBendEstimator;
@@ -16,6 +16,7 @@ use crate::stitching::{
     expected_frames, frame_to_time, ModelUnwrapper, ReconstructedOutput, N_OVERLAPPING_FRAMES,
 };
 use crate::InferenceConfig;
+use basic_pitch_midi_io::MidiWriteError;
 
 /// Error durante la transcripcion.
 #[derive(Debug, thiserror::Error)]
@@ -55,6 +56,10 @@ pub enum TranscriptionError {
     /// Error al escribir la salida.
     #[error("error de salida: {0}")]
     Io(#[from] std::io::Error),
+
+    /// Error al generar el MIDI.
+    #[error("error al generar el MIDI: {0}")]
+    Midi(#[from] MidiWriteError),
 }
 
 impl From<basic_pitch_model::ModelError> for TranscriptionError {
@@ -74,6 +79,8 @@ impl From<basic_pitch_model::FrontendError> for TranscriptionError {
 pub struct TranscriptionResult {
     /// Eventos de nota detectados, ordenados por tiempo.
     pub notes: Vec<NoteEvent>,
+    /// Archivo MIDI generado en memoria, listo para guardar o enviar.
+    pub midi_data: Vec<u8>,
     /// Duracion del audio, en segundos.
     pub duration_seconds: f64,
 }
@@ -93,17 +100,39 @@ impl Transcriber {
         Self { model, config }
     }
 
+    /// Dispositivo de ejecucion del modelo.
+    ///
+    /// La implementacion actual es CPU-only.
+    pub fn device(&self) -> &Device {
+        &self.model.device
+    }
+
     /// Carga el modelo desde un directorio y crea el transcriptor.
     pub fn load(model_dir: &Path) -> Result<Self, TranscriptionError> {
         let model = basic_pitch_model::load_model(model_dir)?;
         Ok(Self::new(model, InferenceConfig::default()))
     }
 
+    /// Carga el modelo desde un directorio, indicando el dispositivo de
+    /// ejecucion.
+    ///
+    /// La implementacion actual es CPU-only: el parametro se acepta para
+    /// mantener la firma de la API estable (Fase 12) y se reserva para
+    /// futuras versiones con backend acelerado de Candle. Si se pasa un
+    /// dispositivo distinto de la CPU, se usa la CPU.
+    pub fn load_with_device(model_dir: &Path, _device: Device) -> Result<Self, TranscriptionError> {
+        Self::load(model_dir)
+    }
+
     /// Transcribe un archivo de audio.
     ///
     /// La cadena de operaciones es la de la referencia:
     /// decodificar -> mono (promedio) -> remuestrar -> ventanas.
-    pub fn transcribe(&self, audio_path: &Path) -> Result<TranscriptionResult, TranscriptionError> {
+    pub fn transcribe<P: AsRef<Path>>(
+        &self,
+        audio_path: P,
+    ) -> Result<TranscriptionResult, TranscriptionError> {
+        let audio_path = audio_path.as_ref();
         if !audio_path.exists() {
             return Err(TranscriptionError::NotFound(
                 audio_path.display().to_string(),
@@ -128,8 +157,18 @@ impl Transcriber {
         let predictions = self.run_model(&windows)?;
         let notes = self.to_notes(&predictions, windows.original_length());
 
+        // Generacion del MIDI en memoria (Fase 12): el resultado lleva los
+        // bytes listos para guardarlos o enviarlos sin tocar el sistema de
+        // archivos. El escritor se configura con el tempo y la politica de
+        // pitch bends de la configuracion.
+        let mut writer = basic_pitch_midi_io::MidiWriter::new();
+        writer.tempo = self.config.midi_tempo;
+        writer.multiple_pitch_bends = self.config.multiple_pitch_bends;
+        let midi_data = writer.to_bytes(&notes)?;
+
         Ok(TranscriptionResult {
             notes,
+            midi_data,
             duration_seconds,
         })
     }

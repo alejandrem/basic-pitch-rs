@@ -375,6 +375,14 @@ impl MidiWriter {
         smf.save(path)?;
         Ok(())
     }
+
+    /// Construye el archivo MIDI y lo devuelve como bytes.
+    pub fn to_bytes(&self, notes: &[NoteEvent]) -> Result<Vec<u8>, MidiWriteError> {
+        let smf = self.build(notes)?;
+        let mut bytes = Vec::new();
+        smf.write_std(&mut bytes)?;
+        Ok(bytes)
+    }
 }
 
 /// Reexportado por comodidad.
