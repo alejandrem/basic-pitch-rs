@@ -30,15 +30,23 @@ jobs:
         with:
           components: clippy
       - uses: Swatinem/rust-cache@v2
+      - name: Instalar libsoxr (dependencia del sistema del remuestreo)
+        run: sudo apt-get update && sudo apt-get install -y libsoxr-dev pkg-config
       - run: cargo clippy --workspace --all-targets -- -D warnings
 
   test:
     name: tests
     runs-on: ubuntu-latest
+    env:
+      # Sin esto, un fixture ausente hace que los tests contra el upstream se
+      # omitan en silencio y el CI salga en verde sin validar nada.
+      BASIC_PITCH_REQUIRE_FIXTURES: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
+      - name: Instalar libsoxr (dependencia del sistema del remuestreo)
+        run: sudo apt-get update && sudo apt-get install -y libsoxr-dev pkg-config
       - run: cargo test --workspace
       - name: Validacion de notas contra el upstream (vocadito_10)
         run: cargo test --release -p basic-pitch-transcription --test notes_reference
@@ -50,4 +58,6 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
+      - name: Instalar libsoxr (dependencia del sistema del remuestreo)
+        run: sudo apt-get update && sudo apt-get install -y libsoxr-dev pkg-config
       - run: cargo build --release
