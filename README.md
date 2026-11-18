@@ -180,28 +180,6 @@ cargo test --release -p basic-pitch-transcription --test notes_reference
 
 ---
 
-## 📊 Estado del desarrollo
-
-| Componente | Estado | Validado contra |
-|---|---|---|
-| Estructura del proyecto Rust | Completo | - |
-| Decodificación de audio (5 formatos) | Completo | `soundfile`: 2.7e-8 |
-| Preprocesamiento de audio | Completo | ídem |
-| Frontend CQT | Completo | TensorFlow: 5.7e-6 |
-| Harmonic Stacking | Completo | TensorFlow: 3.4e-3 |
-| Arquitectura neuronal | Completo | TensorFlow: 1.7e-5 / 5.3e-5 |
-| Reconstrucción temporal | Completo | `unwrap_output` end-to-end |
-| Detección polifónica de notas | Completo | `output_to_notes_polyphonic`: **0 desajustes** |
-| Escritura de MIDI | Completo | - |
-| Transcripción end-to-end | Completo | - |
-| Pitch bend | Completo | `get_pitch_bends`: **0 ticks** de diferencia |
-| API pública | Completo (Fase 12) | - |
-| Pruebas + CI | Completo (Fase 13) | - |
-| Benchmarks | Completo (Fase 14) | - |
-| Documentación | Completo (Fase 15) | - |
-
----
-
 ## 🔮 Visión a futuro
 
 - Editor MIDI mediante piano roll.

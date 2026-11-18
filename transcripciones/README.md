@@ -26,7 +26,7 @@ cargo run --release -- transcribe transcripciones/amaris.mp3 -o transcripciones/
 
 ---
 
-## `amaris`
+## `amaris transcrita en rust`
 
 | | |
 |---|---|
@@ -44,14 +44,16 @@ Spotify** (mismo inicio, mismo final, mismo pitch). Se puede comprobar:
 cargo test --release -p basic-pitch-transcription --test notes_reference
 ```
 
-### Las dos versiones
+### Versiones disponibles
 
 | Fichero | Notas | Qué es |
 |---|---:|---|
 | `amaris.mid` | 1842 | El **umbral por defecto** (0.3), idéntico al upstream de Spotify |
-| `amaris_limpio.mid` | 1499 | Con `--frame-threshold 0.4`: menos armonías, a costa de algunas notas reales |
+| `amaris_p3.mid` | 1842 | Re-transcripción con el motor compilado (`--release`), debido a que tiene mas ruido (1842 notas, 163,71 s) |
+| `amaris_limpio.mid` | 1499 | Con `--frame-threshold 0.4`: menos armonia, pero mas lipia. 
+| `amaris.mp3` | 1809 | esta es la cancion transcrita con la red neuronal de basic pitch en python. 
 
-Las dos suenan a **piano acústico** (programa GM 0).
+todas las versiones suenan a **piano acústico** (programa GM 0).
 
 El umbral decide cuántas activaciones se consideran "nota encendida". Con
 0.3 (el del upstream) entran las armonías del timbre del piano, que el
@@ -80,7 +82,7 @@ Y se transcriben los dos:
 | Piano real | 2158 | 1716 (**87 %**) | 442 |
 | Piano real, sin Melodia | 2113 | 1706 (86.5 %) | 407 |
 
-**El resultado contraintuitivo: el audio limpio se transcribe PEOR.**
+**El resultado contraintuitivo: el audio limpio se transcribe PEOR.** 
 
 La razón es que Basic Pitch no oye notas: oye **timbre**. Un seno puro
 no tiene los parciales que el modelo usa para afinar y para detectar los
@@ -101,3 +103,9 @@ carry el costo de perder notas reales.
 
 El `.wav` pesa unos 29 MB y el `.mp3` unos 3,8 MB, así que **no se
 versionan**: están en el `.gitignore`. Los `.mid` sí (son unos 13 KB).
+
+--- 
+## Menciones honorables
+
+- quiero hacer una honorable mencion a que estare trabajando en los  benchmarks  entre la comparacion de la red neuronal de spotify y la mia con rust, comparando principalmente canciones instrumentales de piano, cuerdas, y vientos mader y metal, en cuanto a la voz no sacare comparacion.
+

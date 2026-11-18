@@ -41,7 +41,7 @@ Esto permitirá integrarlo después con:
 - Tauri.
 - Vue.
 - TypeScript.
-- Aplicaciones de escritorio.
+- software de escritorio.
 - Una posible interfaz web.
 - Una aplicación móvil compatible.
 
