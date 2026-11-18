@@ -238,7 +238,7 @@ prueban las relaciones `direct`, `bn_folded` y `bn_folded_bias`, y se
 elige la de menor diferencia. Es una comprobacion mas fuerte que una
 simple igualdad de formas.
 
-**Aprendizaje.** Comparar tensores por forma es una bomba de reloji en
+**Aprendizaje.** Comparar tensores por forma es una bomba de relojeria en
 cualquier port de pesos entre frameworks.
 
 ---
@@ -372,7 +372,7 @@ un `NOTICE` que acredita la derivacion.
 ### B-18. Diferencias de API entre versiones de las dependencias
 
 Errores de compilacion y de comportamiento al actualizar a las versiones
-actuales. Se documentan porque las|相关aciones volveran a tropezar:
+actuales. Se documentan porque las actualizaciones volveran a tropezar:
 
 | Dependencia | Cambio | Solucion |
 |---|---|---|
@@ -580,7 +580,7 @@ apartado 3.3.1) avisaba de que usar `soxr` en Rust garantiza el mismo
 el decodificador puede diferir.
 
 **Causa.** El oraculo sintetico (`input_audio.npy`) viene ya decodificado
-y remuestreado, asi que no permetia medir esa diferencia.
+y remuestreado, asi que no permitia medir esa diferencia.
 
 **Solucion.** Se ha generado un segundo oraculo con audio real del
 upstream (`reference/audio_reference/`), usando el SavedModel oficial y
@@ -736,9 +736,9 @@ Ademas, `validate()` comprobaba siete cosas y el codigo leia muchas mas:
 `harmonic_stacking.shifts`, `n_output_freqs`, `input_n_bins`,
 `bins_per_semitone`, el contrato de audio y el de ventaneo.
 
-**El caso de `shifts` es el masinteresting.** El codigo **recalcula** los
+**El caso de `shifts` es el mas interesante.** El codigo **recalcula** los
 desplazamientos a partir de los armonicos y no lee el campo `shifts` del
-JSON. Un `shifts` equivocado en el fichero nooria nada: el campo era
+JSON. Un `shifts` equivocado en el fichero no cambiaria nada: el campo era
 decorativo y podia mentir.
 
 **Solucion.**

@@ -1,5 +1,10 @@
 # Estado de P3 y P4 (Fases 6 a 9)
 
+> **Documento histórico.** Es una foto del proyecto en el momento en que se
+> escribió. Las Fases 10 a 14 se implementaron después (pitch bend, escritor
+> MIDI, API de biblioteca, tests de integración y benchmarks). El estado
+> actual está en el `README.md` y en el CI.
+
 Estado del proyecto tras las Fases 3 a 9: el frontend acústico, la red
 neuronal, la reconstrucción temporal y la detección de notas.
 
@@ -108,7 +113,7 @@ cargo fmt --all -- --check
 ## Estado del repositorio
 
 ```text
-tests:   174 en verde
+tests:   174 en verde (a la fecha de este documento)
 clippy:  0 avisos
 fmt:     sin diferencias
 ```
@@ -125,9 +130,9 @@ fmt:     sin diferencias
    usa `Electric Piano 1` (GM 4). El cambio de programa se emite
    **explícitamente**: sin él, el resultado dependería del reproductor.
 
-3. **El pitch bend no se calcula todavía** (es la Fase 10). El
-   `NoteEvent` ya tiene el campo `pitch_bend`, y la red ya expone el
-   `contour` que hace falta para estimarlo.
+3. **El pitch bend** estaba previsto como Fase 10 y **ya se calcula** (ver
+   `crates/transcription/src/pitch_bend.rs`). El `NoteEvent` tiene el campo
+   `pitch_bend` y la red expone el `contour` que hace falta para estimarlo.
 
 4. **La comparación con el upstream es siempre nota a nota**, no por
    conjuntos: es lo que permite localizar un desajuste en vez de
@@ -138,16 +143,13 @@ fmt:     sin diferencias
 
 ---
 
-## Lo que queda
+## Lo que quedaba (histórico)
 
-| Fase | Contenido |
-|---|---|
-| — | Nada: el bloque P4 (fases 8, 9, 10 y 11) está cerrado |
-| 11 · MIDI | Pulir el escritor (pitch bend por canal, tempo, metadatos) |
-| 12 · API | Biblioteca pública, configuración por comando, API de Rust |
-| 13 · Tests | Suite de integración, regresión y CI |
-| 14 · Rendimiento | Benchmarks, backends |
-| 15 · Documentación | README definitivo, procedencia, licencias |
-
-La Fase 10 es la siguiente natural: el `contour` ya está disponible y el
-campo `pitch_bend` del evento ya existe.
+| Fase | Contenido | Estado actual |
+|---|---|---|
+| 10 · Pitch bend | Estimación desde el `contour` | Implementado (`pitch_bend.rs`) |
+| 11 · MIDI | Pulir el escritor (pitch bend por canal, tempo, metadatos) | Implementado (`midi-io`) |
+| 12 · API | Biblioteca pública y API de Rust | Implementado (`Transcriber`) |
+| 13 · Tests | Suite de integración, regresión y CI | Implementado (`tests/`, `ci.yml`) |
+| 14 · Rendimiento | Benchmarks, backends | Benchmarks hechos; backends (GPU) pendientes |
+| 15 · Documentación | README definitivo, procedencia, licencias | En curso |

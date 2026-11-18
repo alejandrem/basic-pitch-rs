@@ -72,6 +72,28 @@ basic-pitch-rs/
 
 ---
 
+## 📦 Requisitos
+
+- **Rust 1.82+**.
+- **libsoxr**, como librería del sistema con cabeceras y `pkg-config`. El remuestreo
+  usa `soxr` para reproducir el `soxr_hq` de librosa; sin la librería,
+  `cargo build` falla al compilar `libsoxr-sys`.
+
+| Sistema | Instalación |
+|---|---|
+| Arch / CachyOS | `sudo pacman -S soxr pkgconf` |
+| Debian / Ubuntu | `sudo apt install libsoxr-dev pkg-config` |
+| macOS (Homebrew) | `brew install libsoxr pkg-config` |
+
+> `libsoxr` es LGPL-2.1+ y se enlaza de forma **dinámica**. Si algún día
+> distribuyes un binario (por ejemplo, empaquetado con Tauri), tendrás que
+> incluir la librería y cumplir los términos de la LGPL.
+
+Python **no** hace falta para ejecutar el programa; solo para regenerar y
+auditar los pesos (ver más abajo).
+
+---
+
 ## 🚀 Uso rápido
 
 ### Transcribir audio a MIDI
@@ -124,7 +146,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```
 
 - `Transcriber::load` carga el modelo **una sola vez** y se reutiliza para varios archivos.
-- `load_with_device(...)` existe para compatibilidad futura (implementación actual: CPU-only).
+- `load_with_device(...)` mantiene la firma estable; la implementación actual es CPU-only y devuelve `TranscriptionError::UnsupportedDevice` si se pide otro dispositivo.
 - `TranscriptionResult` expone `notes`, `midi_data` y `duration_seconds`.
 - Errores tipados (`TranscriptionError`): audio, remuestreo, modelo, frontend, Candle, reconstrucción, E/S y MIDI.
 
@@ -178,9 +200,82 @@ cargo test --release -p basic-pitch-transcription --test notes_reference
 - **Precisión:** `float32`, sin cuantización ni redondeo.
 - **BatchNorm:** estadísticas `moving_mean`/`moving_variance` provienen de TensorFlow (el ONNX las tiene fusionadas).
 
+> **Los pesos de este repositorio no son un artefacto original del proyecto.**
+> Son los pesos preentrenados de Spotify, convertidos de TensorFlow a
+> Safetensors: los kernels se permutan de `[kh, kw, in, out]` a
+> `[out, in, kh, kw]` sin modificar ningún valor. El modelo sigue siendo
+> trabajo de Spotify y se rige por la licencia Apache-2.0 del upstream
+> (ver `NOTICE`).
+
+Para comprobar la integridad de los ficheros que hay en el repositorio:
+
+```bash
+(cd models/basic-pitch/icassp-2022 && sha256sum -c SHA256SUMS)
+```
+
+### Regenerar los pesos
+
+Solo hace falta para auditar la conversión; el programa Rust no depende de Python.
+
+```bash
+# 1. Clon del upstream en el commit exacto, donde lo esperan los scripts
+#    (la carpeta basic-pitch/ está ignorada por git).
+git clone https://github.com/spotify/basic-pitch basic-pitch
+git -C basic-pitch checkout fa5997af0a8210982619003269994a1be25eddf3
+
+# 2. Entorno Python fijado (ver requirements-ref.txt).
+uv venv --python 3.11 .venv
+uv pip install --python .venv/bin/python -r requirements-ref.txt
+
+# 3. Exportar a models/basic-pitch/icassp-2022/ y validar contra TensorFlow y ONNX.
+.venv/bin/python tools/weight-export/export_weights.py
+.venv/bin/python tools/weight-export/validate_weights.py
+```
+
+Los tensores regenerados son idénticos bit a bit a los del repositorio (diferencia
+máxima 0.0 en todos los tensores del modelo y del CQT), pero el fichero
+`.safetensors` **no** es byte-idéntico: el orden de las claves del metadata
+no es determinista entre ejecuciones. Por eso `sha256sum -c` solo sirve para
+comprobar la integridad de los ficheros ya versionados, no para validar una
+regeneración; para eso se comparan los tensores (`validate_weights.py`), no los
+hashes.
+
+---
+
+## ⚠️ Limitaciones conocidas
+
+- **Fidelidad, no calidad.** El proyecto valida que el resultado coincida con
+  el de Spotify, no que transcriba bien: todavía no hay una evaluación contra
+  un ground truth (por ejemplo, con `mir_eval`). El modelo original produce
+  notas espurias ("armonías del timbre"), y este port las reproduce.
+- **Deriva temporal heredada.** La conversión de frames a tiempo reproduce la
+  del upstream, que numera las ventanas dividiendo entre 172 aunque sobreviven
+  142 frames por ventana (B-06 en `docs/bugs-resueltos.md`). Los tiempos de
+  las notas acumulan un desplazamiento que aún no se ha medido, y no existe
+  un modo "corregido".
+- **Memoria lineal con la duración.** Las predicciones reconstruidas se
+  conservan hasta el final: del orden de 500 MiB por hora de audio, más copias
+  temporales. Adecuado para canciones, no para audios de varias horas.
+- **Solo CPU.**
+- **Dependencia del sistema:** `libsoxr` (ver Requisitos).
+
+---
+
+## 🧭 Decisión de diseño: Candle en lugar de ONNX Runtime
+
+Una alternativa más corta habría sido cargar el ONNX oficial con un runtime
+como `ort`. Este proyecto reimplementa el frontend CQT y la red sobre Candle
+porque eso es un objetivo explícito (ver Objetivos). El coste es real: un CQT
+propio que mantener y numerosas trampas numéricas (34 bugs documentados, 17 de
+ellos silenciosos), compensado con la validación etapa a etapa contra el
+upstream. Si lo que necesitas es solo transcribir, el paquete original de
+Spotify es la opción más directa.
+
 ---
 
 ## 🔮 Visión a futuro
+
+> Ideas, no compromisos: cada una es un proyecto mayor que este port.
 
 - Editor MIDI mediante piano roll.
 - Editor de partituras musicales.
