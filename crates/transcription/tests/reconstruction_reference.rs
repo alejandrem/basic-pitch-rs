@@ -25,7 +25,7 @@ use basic_pitch_transcription::stitching::{expected_frames, ModelUnwrapper, N_OV
 use candle_core::Tensor;
 
 mod common;
-use common::{omitir, vocadito_path};
+use common::omitir;
 
 /// Raiz del repositorio.
 fn repo_root() -> PathBuf {
