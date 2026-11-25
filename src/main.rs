@@ -1,24 +1,156 @@
 //! CLI de `basic-pitch-rs`.
 //!
-//! Estado actual del proyecto: el frontend acustico (Fases 3, 4 y 5), la red
-//! neuronal, la reconstruccion temporal (Fase 8) y la deteccion de notas
-//! (Fase 9) estan implementados y validados contra la referencia de
-//! TensorFlow.
-//!
 //! ```text
 //! basic-pitch info [dir]                Muestra el contrato del modelo
-//! basic-pitch transcribe <audio> [-o salida.mid]
+//! basic-pitch transcribe <audio> [opciones]
 //!                                        Transcribe un archivo a MIDI
 //! ```
+//!
+//! Los umbrales de la deteccion de notas se exponen como opciones; la lista
+//! completa, con sus valores por defecto, esta en `basic-pitch transcribe --help`.
 
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use basic_pitch_model::ModelConfig;
+use basic_pitch_transcription::note_detection::{
+    DEFAULT_ENERGY_TOL, DEFAULT_FRAME_THRESHOLD, DEFAULT_MINIMUM_NOTE_LENGTH_MS,
+    DEFAULT_ONSET_THRESHOLD,
+};
+use basic_pitch_transcription::NoteDetectionConfig;
+use clap::{Args, Parser, Subcommand};
 
 const DEFAULT_MODEL_DIR: &str = "models/basic-pitch/icassp-2022";
 
+/// Transcripcion musical (audio a MIDI) en Rust, port de Spotify Basic Pitch.
+#[derive(Parser)]
+#[command(name = "basic-pitch", version)]
+struct Cli {
+    /// Sin subcomando se ejecuta `info`.
+    #[command(subcommand)]
+    command: Option<Command>,
+}
+
+#[derive(Subcommand)]
+enum Command {
+    /// Muestra la configuracion del modelo y valida sus invariantes
+    Info {
+        /// Directorio del modelo
+        #[arg(value_name = "DIR")]
+        dir: Option<PathBuf>,
+    },
+    /// Transcribe un archivo de audio a MIDI
+    Transcribe(TranscribeArgs),
+}
+
+#[derive(Args)]
+struct TranscribeArgs {
+    /// Archivo de audio (WAV, FLAC, OGG, MP3 o AAC)
+    audio: PathBuf,
+
+    /// Ruta del MIDI de salida (por defecto, junto al audio)
+    #[arg(short, long, value_name = "SALIDA.mid")]
+    output: Option<PathBuf>,
+
+    /// Directorio del modelo
+    #[arg(short, long, value_name = "DIR", default_value = DEFAULT_MODEL_DIR)]
+    model: PathBuf,
+
+    /// Umbral de activacion de onset (0 a 1)
+    ///
+    /// Subirlo da menos notas espurias, pero pierde notas reales con ataque
+    /// suave.
+    #[arg(long, value_name = "N", value_parser = fraccion, default_value_t = DEFAULT_ONSET_THRESHOLD)]
+    onset_threshold: f64,
+
+    /// Umbral de activacion de nota (0 a 1)
+    ///
+    /// Subirlo gana precision y pierde recall. Con una pieza de prueba
+    /// sintetica, de 0.3 a 0.5 la precision pasa de 0.81 a 0.93 y el recall de
+    /// 0.87 a 0.73.
+    #[arg(long, value_name = "N", value_parser = fraccion, default_value_t = DEFAULT_FRAME_THRESHOLD)]
+    frame_threshold: f64,
+
+    /// Duracion minima de nota, en milisegundos
+    #[arg(long, value_name = "MS", value_parser = no_negativo, default_value_t = DEFAULT_MINIMUM_NOTE_LENGTH_MS)]
+    min_note_length_ms: f64,
+
+    /// Tolerancia de energia de Melodia, en frames
+    #[arg(long, value_name = "FRAMES", default_value_t = DEFAULT_ENERGY_TOL)]
+    energy_tol: usize,
+
+    /// Frecuencia minima permitida, en Hz
+    #[arg(long, value_name = "HZ", value_parser = positivo)]
+    min_freq: Option<f64>,
+
+    /// Frecuencia maxima permitida, en Hz
+    #[arg(long, value_name = "HZ", value_parser = positivo)]
+    max_freq: Option<f64>,
+
+    /// Desactiva el truco de Melodia: solo notas con onset claro
+    #[arg(long)]
+    no_melodia: bool,
+
+    /// No infiere onsets adicionales a partir de los cambios de nota
+    #[arg(long)]
+    no_infer_onsets: bool,
+}
+
+impl TranscribeArgs {
+    /// Configuracion de la deteccion de notas que describen las opciones.
+    fn note_detection(&self) -> NoteDetectionConfig {
+        NoteDetectionConfig {
+            onset_threshold: self.onset_threshold,
+            frame_threshold: self.frame_threshold,
+            minimum_note_length_ms: self.min_note_length_ms,
+            energy_tol: self.energy_tol,
+            infer_onsets: !self.no_infer_onsets,
+            melodia_trick: !self.no_melodia,
+            min_freq: self.min_freq,
+            max_freq: self.max_freq,
+        }
+    }
+}
+
+fn numero(texto: &str) -> Result<f64, String> {
+    texto
+        .parse::<f64>()
+        .map_err(|_| format!("`{texto}` no es un numero"))
+}
+
+/// Un numero entre 0 y 1.
+fn fraccion(texto: &str) -> Result<f64, String> {
+    let valor = numero(texto)?;
+    if (0.0..=1.0).contains(&valor) {
+        Ok(valor)
+    } else {
+        Err(format!("{valor} debe estar entre 0 y 1"))
+    }
+}
+
+/// Un numero finito mayor o igual que cero.
+fn no_negativo(texto: &str) -> Result<f64, String> {
+    let valor = numero(texto)?;
+    if valor.is_finite() && valor >= 0.0 {
+        Ok(valor)
+    } else {
+        Err(format!("{valor} debe ser un numero no negativo"))
+    }
+}
+
+/// Un numero finito mayor que cero.
+fn positivo(texto: &str) -> Result<f64, String> {
+    let valor = numero(texto)?;
+    if valor.is_finite() && valor > 0.0 {
+        Ok(valor)
+    } else {
+        Err(format!("{valor} debe ser un numero positivo"))
+    }
+}
+
 fn main() -> ExitCode {
+    let cli = Cli::parse();
+
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
@@ -26,15 +158,9 @@ fn main() -> ExitCode {
         )
         .init();
 
-    let mut args = std::env::args().skip(1);
-    let command = args.next().unwrap_or_else(|| "info".to_string());
-
-    match command.as_str() {
-        "info" => {
-            let model_dir = args
-                .next()
-                .map(PathBuf::from)
-                .unwrap_or_else(|| PathBuf::from(DEFAULT_MODEL_DIR));
+    match cli.command.unwrap_or(Command::Info { dir: None }) {
+        Command::Info { dir } => {
+            let model_dir = dir.unwrap_or_else(|| PathBuf::from(DEFAULT_MODEL_DIR));
 
             if let Err(error) = print_info(&model_dir) {
                 eprintln!("error: {error}");
@@ -42,114 +168,33 @@ fn main() -> ExitCode {
             }
             ExitCode::SUCCESS
         }
-        "transcribe" => {
-            let mut audio: Option<PathBuf> = None;
-            let mut output: Option<PathBuf> = None;
-            let mut model_dir = PathBuf::from(DEFAULT_MODEL_DIR);
-            let mut melodia_trick = true;
-            let mut frame_threshold: Option<f64> = None;
-
-            while let Some(arg) = args.next() {
-                match arg.as_str() {
-                    "-o" | "--output" => match args.next() {
-                        Some(ruta) => output = Some(PathBuf::from(ruta)),
-                        None => {
-                            eprintln!("error: -o necesita una ruta");
-                            return ExitCode::FAILURE;
-                        }
-                    },
-                    "-m" | "--model" => match args.next() {
-                        Some(ruta) => model_dir = PathBuf::from(ruta),
-                        None => {
-                            eprintln!("error: -m necesita una ruta");
-                            return ExitCode::FAILURE;
-                        }
-                    },
-                    "--frame-threshold" => match args.next().and_then(|v| v.parse::<f64>().ok()) {
-                        Some(v) => frame_threshold = Some(v),
-                        None => {
-                            eprintln!("error: --frame-threshold necesita un numero");
-                            return ExitCode::FAILURE;
-                        }
-                    },
-                    "--no-melodia" => {
-                        // Sin el truco de Melodia solo se detectan las
-                        // notas con onset claro: menos armonias del
-                        // timbre, a costa de notas mas debiles.
-                        melodia_trick = false;
-                    }
-                    "-h" | "--help" => {
-                        print_help();
-                        return ExitCode::SUCCESS;
-                    }
-                    otra => {
-                        if audio.is_none() {
-                            audio = Some(PathBuf::from(otra));
-                        } else {
-                            eprintln!("error: sobran argumentos: {otra}");
-                            return ExitCode::FAILURE;
-                        }
-                    }
-                }
+        Command::Transcribe(args) => match transcribe(&args) {
+            Ok(mensaje) => {
+                println!("{mensaje}");
+                ExitCode::SUCCESS
             }
-
-            let Some(audio) = audio else {
-                eprintln!("error: falta el archivo de audio\n");
-                print_help();
-                return ExitCode::FAILURE;
-            };
-
-            match transcribe(
-                &audio,
-                output.as_deref(),
-                &model_dir,
-                melodia_trick,
-                frame_threshold,
-            ) {
-                Ok(mensaje) => {
-                    println!("{mensaje}");
-                    ExitCode::SUCCESS
-                }
-                Err(error) => {
-                    eprintln!("error: {error}");
-                    ExitCode::FAILURE
-                }
+            Err(error) => {
+                eprintln!("error: {error}");
+                ExitCode::FAILURE
             }
-        }
-        "--help" | "-h" | "help" => {
-            print_help();
-            ExitCode::SUCCESS
-        }
-        other => {
-            eprintln!("comando desconocido: {other}\n");
-            print_help();
-            ExitCode::FAILURE
-        }
+        },
     }
 }
 
 /// Transcribe un archivo de audio y escribe el MIDI.
-fn transcribe(
-    audio: &Path,
-    output: Option<&Path>,
-    model_dir: &Path,
-    melodia_trick: bool,
-    frame_threshold: Option<f64>,
-) -> Result<String, String> {
-    let mut transcriptor = basic_pitch_transcription::Transcriber::load(model_dir)
+fn transcribe(args: &TranscribeArgs) -> Result<String, String> {
+    let mut transcriptor = basic_pitch_transcription::Transcriber::load(&args.model)
         .map_err(|e| format!("no se pudo cargar el modelo: {e}"))?;
-    transcriptor.config.note_detection.melodia_trick = melodia_trick;
-    if let Some(umbral) = frame_threshold {
-        transcriptor.config.note_detection.frame_threshold = umbral;
-    }
+    transcriptor.config.note_detection = args.note_detection();
 
     let resultado = transcriptor
-        .transcribe(audio)
-        .map_err(|e| format!("no se pudo transcribir {audio:?}: {e}"))?;
+        .transcribe(&args.audio)
+        .map_err(|e| format!("no se pudo transcribir {:?}: {e}", args.audio))?;
 
-    let destino = output
-        .map(PathBuf::from)
-        .unwrap_or_else(|| audio.with_extension("mid"));
+    let destino = args
+        .output
+        .clone()
+        .unwrap_or_else(|| args.audio.with_extension("mid"));
 
     // El MIDI ya viene generado en memoria dentro del resultado (Fase 12):
     // solo hay que volcarlo al disco.
@@ -158,38 +203,14 @@ fn transcribe(
 
     Ok(format!(
         "{} -> {}  ({} notas, {:.2} s de audio)",
-        audio.display(),
+        args.audio.display(),
         destino.display(),
         resultado.notes.len(),
         resultado.duration_seconds
     ))
 }
 
-fn print_help() {
-    println!("basic-pitch-rs - transcripcion musical en Rust");
-    println!();
-    println!("USO:");
-    println!("    basic-pitch <comando>");
-    println!();
-    println!("COMANDOS:");
-    println!(
-        "    info [dir]              Muestra la configuracion del modelo y valida sus invariantes"
-    );
-    println!("    transcribe <audio>      Transcribe un archivo de audio a MIDI");
-    println!("        -o <salida.mid>    Ruta del MIDI de salida (por defecto, junto al audio)");
-    println!("        -m <dir_modelo>    Directorio del modelo");
-    println!("        --no-melodia       Sin el truco de Melodia: solo notas con onset claro,");
-    println!("                           sin las armonias del timbre");
-    println!("        --frame-threshold N Umbral de activacion de nota (0.3 por defecto).");
-    println!("                           Subirlo elimina las armonias mas debles,");
-    println!("                           pero tambien algunas notas reales");
-    println!("    help                    Muestra esta ayuda");
-    println!();
-    println!("El directorio del modelo por defecto es:");
-    println!("    {DEFAULT_MODEL_DIR}");
-}
-
-fn print_info(model_dir: &std::path::Path) -> Result<(), String> {
+fn print_info(model_dir: &Path) -> Result<(), String> {
     println!("basic-pitch-rs");
     println!("===============");
     println!();

@@ -46,6 +46,7 @@ thiserror = "2"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tempfile = "3"
+clap = { version = "4.5", features = ["derive"] }
 
 # --- Crates internos ------------------------------------------------------
 basic-pitch-audio-io = { path = "crates/audio-io" }
@@ -75,6 +76,14 @@ anyhow.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
 serde_json.workspace = true
+clap.workspace = true
+
+# Fachada de biblioteca: reexporta la API principal para quien dependa de este
+# crate en lugar de `basic-pitch-transcription`. El nombre evita colisionar con
+# el binario `basic-pitch` en la salida de `cargo doc`.
+[lib]
+name = "basic_pitch_rs"
+path = "src/lib.rs"
 
 [[bin]]
 name = "basic-pitch"
