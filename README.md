@@ -119,7 +119,27 @@ basic-pitch transcribe cancion.mp3 -o limpio.mid --no-melodia
 
 # Subir el umbral de activacion de nota (0.3 por defecto).
 basic-pitch transcribe cancion.mp3 -o limpio.mid --frame-threshold 0.4
+
+# Subir el umbral de onset (0.5 por defecto) y exigir notas de al menos 150 ms.
+basic-pitch transcribe cancion.mp3 -o limpio.mid --onset-threshold 0.6 --min-note-length-ms 150
+
+# Version y ayuda completa (generada, con los valores por defecto).
+basic-pitch --version
+basic-pitch transcribe --help
 ```
+
+| Opción | Defecto | Notas |
+|---|---|---|
+| `--frame-threshold N` | 0.3 | Sube la precisión y baja el recall; ver Limitaciones. |
+| `--onset-threshold N` | 0.5 | En una pieza sintética, el F1 de onset es máximo entre 0.6 y 0.8 (0.87-0.89, frente a 0.84 con 0.5), pero el F1 que exige los finales de nota baja al subirlo (0.36 con 0.5, 0.30 con 0.7). Ver `docs/pruebas/evaluacion-ida-y-vuelta.md`. |
+| `--min-note-length-ms MS` | 127.7 | Duración mínima de nota. |
+| `--energy-tol FRAMES` | 11 | Tolerancia de energía de Melodia. |
+| `--min-freq HZ`, `--max-freq HZ` | sin límite | Descarta notas fuera del rango. |
+| `--no-melodia` | Melodia activo | Solo notas con onset claro. |
+| `--no-infer-onsets` | activo | No infiere onsets a partir de los cambios de nota. |
+
+Los umbrales fuera de rango (por ejemplo, `--frame-threshold 3`) se rechazan
+antes de cargar el modelo.
 
 ### Convertir MIDI a audio (para oirlo)
 
@@ -146,6 +166,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```
 
 - `Transcriber::load` carga el modelo **una sola vez** y se reutiliza para varios archivos.
+- El crate raíz (`basic_pitch_rs`) reexporta `Transcriber`, `TranscriptionResult`, `TranscriptionError`, `InferenceConfig`, `NoteDetectionConfig` y `NoteEvent`, para no tener que depender de los crates internos.
+- Los umbrales se ajustan en `transcriptor.config.note_detection` (`onset_threshold`, `frame_threshold`, `minimum_note_length_ms`, ...); el CLI es una capa fina sobre esa misma configuración.
 - `load_with_device(...)` mantiene la firma estable; la implementación actual es CPU-only y devuelve `TranscriptionError::UnsupportedDevice` si se pide otro dispositivo.
 - `TranscriptionResult` expone `notes`, `midi_data` y `duration_seconds`.
 - Errores tipados (`TranscriptionError`): audio, remuestreo, modelo, frontend, Candle, reconstrucción, E/S y MIDI.
@@ -245,17 +267,25 @@ hashes.
 ## ⚠️ Limitaciones conocidas
 
 - **Fidelidad, no calidad.** El proyecto valida que el resultado coincida con
-  el de Spotify, no que transcriba bien: todavía no hay una evaluación contra
-  un ground truth (por ejemplo, con `mir_eval`). El modelo original produce
-  notas espurias ("armonías del timbre"), y este port las reproduce.
-- **Deriva temporal heredada.** La conversión de frames a tiempo reproduce la
-  del upstream, que numera las ventanas dividiendo entre 172 aunque sobreviven
-  142 frames por ventana (B-06 en `docs/bugs-resueltos.md`). Los tiempos de
-  las notas acumulan un desplazamiento que aún no se ha medido, y no existe
-  un modo "corregido".
+  el de Spotify, no que transcriba bien. La evaluación contra una referencia
+  (`tools/eval/evaluar.py`, con `mir_eval`) existe solo para una ida y vuelta
+  sintética de una pieza de 1972 notas: con soundfont, el F1 de onset es
+  0.84-0.85 con `frame_threshold` 0.3-0.4, y la precisión y el recall se
+  intercambian con el umbral (a 0.50: precisión 0.91, recall 0.73). Es un
+  **techo optimista** (render limpio, sin ruido ni mezcla). No hay todavía
+  evaluación con grabaciones reales y una referencia independiente del modelo.
+- **Deriva temporal heredada, medida y despreciable.** La conversión de
+  frames a tiempo reproduce la del upstream, que numera las ventanas dividiendo
+  entre 172 aunque sobreviven 142 frames por ventana (B-06 en
+  `docs/bugs-resueltos.md`). En la ida y vuelta sintética, el error mediano de
+  onset es el mismo (±5 ms) en el primer y en el último tercio de la pieza, así
+  que no hace falta un modo "corregido". No se ha medido en grabaciones reales.
 - **Memoria lineal con la duración.** Las predicciones reconstruidas se
   conservan hasta el final: del orden de 500 MiB por hora de audio, más copias
   temporales. Adecuado para canciones, no para audios de varias horas.
+- **Melodia crece más que linealmente con la duración:** 535 ms para 4 min de
+  audio frente a 20 ms sin Melodia. Para una canción es una fracción pequeña
+  del tiempo total, pero el crecimiento es casi cuadrático.
 - **Solo CPU.**
 - **Dependencia del sistema:** `libsoxr` (ver Requisitos).
 
