@@ -22,8 +22,8 @@
 //!
 //! Antes de buscar los picos, se combinan los onsets predichos con unos
 //! "onsets inferidos" que se calculan a partir de los saltos de la
-//! activacion de nota: un cambio grande de activacion indica un ataque, even
-//! que la red no haya marcado un onset.
+//! activacion de nota: un cambio grande de activacion indica un ataque, aunque
+//! la red no haya marcado un onset.
 //!
 //! # Las entradas
 //!
@@ -271,7 +271,7 @@ fn get_infered_onsets(
             *value *= factor;
         }
     } else {
-        // El upstream produce NaN aqui; el resultado practical es el mismo
+        // El upstream produce NaN aqui; el resultado practico es el mismo
         // (no hay onsets inferidos) sin propagar NaN.
         for value in frame_diff.iter_mut() {
             *value = 0.0;
