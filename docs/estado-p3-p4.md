@@ -1,9 +1,10 @@
 # Estado de P3 y P4 (Fases 6 a 9)
 
 > **Documento histórico.** Es una foto del proyecto en el momento en que se
-> escribió. Las Fases 10 a 14 se implementaron después (pitch bend, escritor
-> MIDI, API de biblioteca, tests de integración y benchmarks). El estado
-> actual está en el `README.md` y en el CI.
+> escribió. Varias fases posteriores (API de biblioteca, tests de integración
+> y benchmarks) se implementaron después, y las cifras de este documento
+> (número de tests, de crates) ya no son las actuales. El estado actual está
+> en el `README.md` y en el CI.
 
 Estado del proyecto tras las Fases 3 a 9: el frontend acústico, la red
 neuronal, la reconstrucción temporal y la detección de notas.
@@ -143,7 +144,7 @@ fmt:     sin diferencias
 
 ---
 
-## Lo que quedaba (histórico)
+## Fases posteriores y su estado actual
 
 | Fase | Contenido | Estado actual |
 |---|---|---|

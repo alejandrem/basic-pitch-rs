@@ -1,5 +1,9 @@
 # Estado del proyecto: P1 completado (Fases 0, 1 y 2)
 
+> **Documento histórico (2026-11-13).** Las cifras (6 crates, 54 tests) y la
+> fila "3-15 Pendientes" describen el proyecto en esa fecha, no el actual. El
+> estado actual está en el `README.md` y en el CI.
+
 **Fecha:** 2026-11-13
 **Commit de referencia:** `fa5997af0a8210982619003269994a1be25eddf3` (basic-pitch v0.4.0)
 

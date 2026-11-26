@@ -37,10 +37,6 @@ jobs:
   test:
     name: tests
     runs-on: ubuntu-latest
-    env:
-      # Sin esto, un fixture ausente hace que los tests contra el upstream se
-      # omitan en silencio y el CI salga en verde sin validar nada.
-      BASIC_PITCH_REQUIRE_FIXTURES: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable

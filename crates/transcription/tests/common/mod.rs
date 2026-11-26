@@ -27,12 +27,21 @@ pub fn vocadito_path() -> PathBuf {
 
 /// Registra que un test se omite por falta de fixtures.
 ///
-/// Si `BASIC_PITCH_REQUIRE_FIXTURES` esta definida (el CI la define), omitir
-/// es un **fallo**: un CI que se salta en silencio la validacion contra el
-/// upstream da una falsa sensacion de seguridad.
+/// Por defecto, omitir es un **fallo**. Los fixtures (modelo, audio de
+/// referencia y oraculos) estan versionados en el repositorio, asi que su
+/// ausencia es un problema y no una opcion: un `cargo test` que se salta en
+/// silencio la validacion contra el upstream sale en verde sin comprobar nada
+/// (y `cargo test` oculta la salida de los tests que pasan, de modo que ni
+/// siquiera se veria el aviso).
+///
+/// Para trabajar sin ellos de forma deliberada, define
+/// `BASIC_PITCH_ALLOW_MISSING_FIXTURES`.
 pub fn omitir(motivo: &str) {
-    if std::env::var_os("BASIC_PITCH_REQUIRE_FIXTURES").is_some() {
-        panic!("faltan fixtures y BASIC_PITCH_REQUIRE_FIXTURES esta definida: {motivo}");
+    if std::env::var_os("BASIC_PITCH_ALLOW_MISSING_FIXTURES").is_none() {
+        panic!(
+            "faltan fixtures: {motivo}. Si es intencionado, define \
+             BASIC_PITCH_ALLOW_MISSING_FIXTURES=1 para omitir estos tests"
+        );
     }
     eprintln!("OMITIDO: {motivo}");
 }
